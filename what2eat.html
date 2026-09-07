@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>今天吃什么？</title>
+<meta name="description" content="一个非常认真地帮你决定今天吃什么的网站。" />
+<style>
+  :root{
+    --bg:#fff8ef;
+    --card:#ffffff;
+    --text:#1f1f1f;
+    --muted:#77716b;
+    --line:#eee4d9;
+    --accent:#ef2b2d;
+    --accent-2:#ffcc00;
+    --shadow:0 18px 55px rgba(64,42,24,.10);
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family:
+      ui-rounded,
+      "SF Pro Rounded",
+      "PingFang SC",
+      "Microsoft YaHei",
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    color:var(--text);
+    background:
+      radial-gradient(circle at 15% 10%, rgba(255,204,0,.17), transparent 28%),
+      radial-gradient(circle at 90% 85%, rgba(239,43,45,.10), transparent 30%),
+      var(--bg);
+  }
+
+  .page{
+    width:min(920px, calc(100% - 28px));
+    margin:0 auto;
+    padding:42px 0 64px;
+  }
+
+  header{
+    text-align:center;
+    margin-bottom:28px;
+  }
+
+  .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    color:var(--muted);
+    background:rgba(255,255,255,.72);
+    border:1px solid rgba(238,228,217,.9);
+    border-radius:999px;
+    padding:8px 12px;
+    backdrop-filter:blur(8px);
+  }
+
+  .eyebrow .dot{
+    width:8px;height:8px;border-radius:50%;
+    background:#44b874;
+    box-shadow:0 0 0 4px rgba(68,184,116,.12);
+  }
+
+  h1{
+    margin:18px 0 8px;
+    font-size:clamp(42px, 7vw, 76px);
+    letter-spacing:-0.06em;
+    line-height:1;
+  }
+
+  .subtitle{
+    margin:0 auto;
+    max-width:620px;
+    font-size:16px;
+    line-height:1.75;
+    color:var(--muted);
+  }
+
+  .card{
+    background:rgba(255,255,255,.94);
+    border:1px solid rgba(238,228,217,.95);
+    border-radius:28px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+
+  .form{
+    padding:28px;
+  }
+
+  .section{
+    padding:20px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .section:first-child{padding-top:0}
+  .section:last-of-type{border-bottom:none}
+
+  .label-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:13px;
+  }
+
+  .label{
+    font-size:17px;
+    font-weight:750;
+  }
+  .hint{
+    font-size:12px;
+    color:#99918a;
+  }
+
+  .chips{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+
+  .chip{
+    border:1px solid var(--line);
+    background:#fff;
+    color:#4a4540;
+    padding:10px 14px;
+    border-radius:999px;
+    font-size:14px;
+    cursor:pointer;
+    transition:.18s ease;
+    user-select:none;
+  }
+  .chip:hover{
+    transform:translateY(-1px);
+    border-color:#d8c8ba;
+  }
+  .chip.active{
+    background:#201f1d;
+    color:#fff;
+    border-color:#201f1d;
+  }
+
+  .range-wrap{
+    display:grid;
+    grid-template-columns:58px 1fr 58px;
+    align-items:center;
+    gap:12px;
+  }
+
+  input[type="range"]{
+    width:100%;
+    accent-color:#222;
+    cursor:pointer;
+  }
+
+  .range-end{
+    font-size:13px;
+    color:#8c847d;
+    text-align:center;
+  }
+
+  .actions{
+    padding-top:22px;
+  }
+
+  button.primary{
+    width:100%;
+    border:0;
+    border-radius:18px;
+    background:#191919;
+    color:#fff;
+    font-size:17px;
+    font-weight:800;
+    padding:17px 20px;
+    cursor:pointer;
+    transition:.2s ease;
+    box-shadow:0 10px 28px rgba(0,0,0,.14);
+  }
+  button.primary:hover{transform:translateY(-2px)}
+  button.primary:active{transform:translateY(0)}
+  button.primary:disabled{
+    opacity:.7;
+    cursor:wait;
+    transform:none;
+  }
+
+  .thinking{
+    display:none;
+    padding:28px;
+    border-top:1px solid var(--line);
+    background:#fcfaf7;
+  }
+
+  .thinking.show{display:block}
+
+  .thinking-title{
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-bottom:16px;
+    font-weight:800;
+  }
+
+  .simulation-badge{
+    margin-left:auto;
+    padding:5px 9px;
+    border:1px solid #ded4ca;
+    border-radius:999px;
+    color:#817970;
+    background:#fff;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.04em;
+  }
+
+  .loader{
+    width:16px;height:16px;border-radius:50%;
+    border:2px solid #ddd2c8;
+    border-top-color:#1d1d1d;
+    animation:spin .8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .log{
+    max-height:460px;
+    overflow-y:auto;
+    scrollbar-gutter:stable;
+    padding-right:6px;
+    margin:0;
+    padding:0;
+    list-style:none;
+    display:grid;
+    gap:9px;
+    font-family:
+      ui-monospace,
+      SFMono-Regular,
+      Menlo,
+      Monaco,
+      Consolas,
+      "Liberation Mono",
+      monospace;
+    font-size:13px;
+    color:#66605a;
+  }
+
+  .log li{
+    opacity:0;
+    transform:translateY(4px);
+    animation:fadeIn .3s forwards;
+    display:grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    align-items:start;
+    gap:9px;
+    line-height:1.55;
+  }
+
+  .log-kind{
+    min-width: 48px;
+    padding:3px 8px;
+    border-radius:5px;
+    background:#eee9e3;
+    color:#746c65;
+    font-size:10px;
+    font-weight:800;
+    text-align:center;
+  }
+
+  .log-message{
+    min-width:0;
+    overflow-wrap:anywhere;
+  }
+
+  .log li[data-kind="SEARCH"] .log-kind,
+  .log li[data-kind="RETRIEVE"] .log-kind{
+    background:#e9f1ff;
+    color:#416994;
+  }
+
+  .log li[data-kind="ANALYZE"] .log-kind{
+    background:#fff0cf;
+    color:#886719;
+  }
+  .log li[data-kind="VERIFY"] .log-kind{background:#e8f2e9;color:#397346}
+  .source-card{display:block;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff;font-family:inherit}
+  .source-card a{display:block;color:#315d87;font-weight:700;text-decoration:none;line-height:1.6}
+  .source-card a:hover{text-decoration:underline}
+  .source-card a:focus-visible{outline:2px solid #315d87;outline-offset:3px}
+  .source-domain,.source-status{display:block;font-size:11px;color:#817970;margin-top:5px}
+  .source-status{color:#66605a}
+  .source-status[data-state="failed"]{color:#a34b3c}
+  .decision-note{
+    display:block;
+    padding:9px 11px;
+    border-left:3px solid #b9aa8e;
+    border-radius:0 8px 8px 0;
+    background:#f4efe6;
+    color:#615545;
+    line-height:1.75;
+  }
+  .thinking-note{font-size:12px;color:#817970;line-height:1.6;margin:0 0 16px}
+  .thinking.done .loader{display:none}
+  @media(prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    .loader,.log li,.result.show{animation:none}
+    .log li{opacity:1;transform:none}
+  }
+  @keyframes fadeIn{
+    to{opacity:1;transform:none}
+  }
+
+  .result{
+    display:none;
+    padding:34px 28px 42px;
+    border-top:1px solid var(--line);
+    text-align:center;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(255,204,0,.20), transparent 38%),
+      linear-gradient(180deg, #fff, #fff8ed);
+  }
+
+  .result.show{
+    display:block;
+    animation:reveal .5s ease both;
+  }
+
+  @keyframes reveal{
+    from{opacity:0;transform:translateY(10px)}
+    to{opacity:1;transform:none}
+  }
+
+  .result-kicker{
+    display:inline-block;
+    margin-bottom:8px;
+    padding:7px 10px;
+    border-radius:999px;
+    background:#fff1ba;
+    color:#6f5700;
+    font-size:12px;
+    font-weight:800;
+  }
+
+  .result h2{
+    margin:10px 0 6px;
+    font-size:clamp(34px, 8vw, 64px);
+    letter-spacing:-.04em;
+  }
+
+  .result p{
+    margin:0 auto;
+    max-width:560px;
+    color:#776f68;
+    line-height:1.7;
+  }
+
+  .logo-wrap{
+    margin:30px auto 22px;
+    width:min(360px, 100%);
+    aspect-ratio:1.5 / 1;
+    border-radius:28px;
+    background:var(--accent);
+    display:grid;
+    place-items:center;
+    box-shadow:
+      0 24px 55px rgba(239,43,45,.24),
+      inset 0 0 0 1px rgba(255,255,255,.12);
+    position:relative;
+    overflow:hidden;
+  }
+
+  .golden-arches{
+    position:absolute;
+    inset:8% 12% 18%;
+    width:76%;
+    height:74%;
+    object-fit:contain;
+    filter:drop-shadow(0 3px 0 rgba(119,66,0,.12));
+  }
+
+  .logo-text{
+    position:absolute;
+    bottom:12px;
+    left:0;
+    right:0;
+    z-index:3;
+    color:#fff;
+    font-size:clamp(11px, 3.4vw, 14px);
+    letter-spacing:.14em;
+    font-weight:800;
+    text-transform:uppercase;
+    opacity:.96;
+  }
+
+  .result-actions{
+    display:flex;
+    justify-content:center;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:22px;
+  }
+
+  .secondary{
+    border:1px solid var(--line);
+    background:#fff;
+    color:#3e3a36;
+    border-radius:14px;
+    padding:11px 14px;
+    font-weight:700;
+    cursor:pointer;
+  }
+
+  footer{
+    margin-top:20px;
+    text-align:center;
+    color:#a29a93;
+    font-size:12px;
+    line-height:1.6;
+  }
+
+  .tiny{
+    opacity:.8;
+  }
+
+  .fireworks{
+    position:fixed;
+    inset:0;
+    z-index:100;
+    overflow:hidden;
+    pointer-events:none;
+  }
+  .firework-spark{
+    position:absolute;
+    width:5px;
+    height:5px;
+    border-radius:50%;
+    background:var(--spark-color);
+    box-shadow:0 0 6px var(--spark-color);
+    opacity:0;
+    animation:firework-burst 1500ms ease-out var(--spark-delay) both;
+  }
+  @keyframes firework-burst{
+    0%{opacity:0;transform:translate(0, 0) scale(.4)}
+    10%{opacity:1}
+    75%{opacity:.8;transform:translate(var(--spark-x), var(--spark-y)) scale(.85)}
+    100%{opacity:0;transform:translate(var(--spark-x), calc(var(--spark-y) + 35px)) scale(.1)}
+  }
+  @media(prefers-reduced-motion:reduce){
+    .fireworks{display:none}
+    .firework-spark{animation:none}
+  }
+
+  @media (max-width:620px){
+    .page{padding-top:24px}
+    .form,.thinking,.result{padding-left:20px;padding-right:20px}
+    .section{padding:18px 0}
+    .range-wrap{grid-template-columns:48px 1fr 48px}
+    .log{max-height:52vh;font-size:12px}
+    .log li{grid-template-columns:68px minmax(0, 1fr);gap:7px}
+    .log-kind{padding:3px 4px;font-size:9px}
+    .source-card{padding:9px}
+    .logo-wrap{
+      width:100%;
+      max-width:320px;
+      border-radius:22px;
+    }
+    .golden-arches{inset:8% 10% 19%;width:80%;height:73%}
+  }
+</style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div class="eyebrow"><span class="dot"></span> Taste Decision Engine v0.1</div>
+      <h1>今天吃什么？</h1>
+      <p class="subtitle">
+        本网站使用了目前最先进的决策算法。告诉我一点你的口味、预算和状态。系统会综合分析数十个非常重要的变量，
+        然后给出一个极其慎重的结论。
+      </p>
+    </header>
+
+    <section class="card">
+      <div class="form">
+        <div class="section">
+          <div class="label-row">
+            <div class="label">今天想吃什么口味？</div>
+            <div class="hint">可多选</div>
+          </div>
+          <div class="chips" data-group="taste">
+            <button class="chip active" type="button">咸香</button>
+            <button class="chip" type="button">甜口</button>
+            <button class="chip" type="button">辣</button>
+            <button class="chip" type="button">酸</button>
+            <button class="chip" type="button">清淡</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="label-row">
+            <div class="label">现在有多饿？</div>
+            <div class="hint" id="hungerValue">7 / 10</div>
+          </div>
+          <div class="range-wrap">
+            <div class="range-end">随便</div>
+            <input id="hunger" type="range" min="1" max="10" value="7" />
+            <div class="range-end">饿疯</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="label-row">
+            <div class="label">预算大概多少？</div>
+            <div class="hint">单人</div>
+          </div>
+          <div class="chips single" data-group="budget">
+            <button class="chip" type="button">¥20 内</button>
+            <button class="chip active" type="button">¥20–40</button>
+            <button class="chip" type="button">¥40–80</button>
+            <button class="chip" type="button">不看价格</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="label-row">
+            <div class="label">今天更像哪种状态？</div>
+            <div class="hint">选一个</div>
+          </div>
+          <div class="chips single" data-group="mood">
+            <button class="chip active" type="button">想吃点稳的</button>
+            <button class="chip" type="button">想奖励自己</button>
+            <button class="chip" type="button">懒得想</button>
+            <button class="chip" type="button">想尝试新东西</button>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="primary" id="decideBtn" type="button">开始分析</button>
+        </div>
+      </div>
+
+      <div class="thinking" id="thinking">
+        <div class="thinking-title">
+          <span class="loader"></span>
+          <span id="thinkingTitle">正在分析你的饮食偏好……</span>
+          <span class="simulation-badge">Deep Research Agent</span>
+        </div>
+        <p class="thinking-note">实时检索网页中……</p>
+        <ul class="log" id="log" aria-live="polite"></ul>
+      </div>
+
+      <div class="result" id="result">
+        <div class="result-kicker">综合推荐结果</div>
+        <h2>麦当劳</h2>
+        <p id="resultReason">
+          根据你的口味、饥饿程度、预算以及当前精神状态，系统认为这是今天风险最低、收益最稳定的选择。
+        </p>
+
+        <div class="logo-wrap">
+          <img
+            class="golden-arches"
+            src="assets/mcdonalds-golden-arches.svg"
+            alt="麦当劳金色拱门 Logo"
+            width="273"
+            height="239"
+          />
+          <div class="logo-text">MCDONALD'S</div>
+        </div>
+
+        <div class="result-actions">
+          <button class="secondary" id="againBtn" type="button">重新分析一次</button>
+        </div>
+        <p id="paperSummary" class="thinking-note"></p>
+      </div>
+    </section>
+
+    <footer>
+      本网站使用了目前最先进的决策算法。<br />
+      <span class="tiny">提示：多试几次，也许宇宙会改变主意。</span>
+    </footer>
+  </main>
+
+<script>
+  const hunger = document.getElementById('hunger');
+  const hungerValue = document.getElementById('hungerValue');
+  const decideBtn = document.getElementById('decideBtn');
+  const thinking = document.getElementById('thinking');
+  const log = document.getElementById('log');
+  const result = document.getElementById('result');
+  const resultReason = document.getElementById('resultReason');
+  const againBtn = document.getElementById('againBtn');
+  const thinkingTitle = document.getElementById('thinkingTitle');
+  let running = false;
+  let lastSourceUrls = [];
+  let lastPaperIds = [];
+
+  hunger.addEventListener('input', () => {
+    hungerValue.textContent = hunger.value + ' / 10';
+  });
+
+  document.querySelectorAll('.chips').forEach(group => {
+    const single = group.classList.contains('single');
+
+    group.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        if (single) {
+          group.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+        } else {
+          chip.classList.toggle('active');
+          const activeCount = group.querySelectorAll('.chip.active').length;
+          if (activeCount === 0) chip.classList.add('active');
+        }
+      });
+    });
+  });
+
+  const planningPool = [
+    "读取已选口味、预算与当前状态",
+    "整理硬性约束与可放宽条件",
+    "根据饥饿程度调整份量权重",
+    "建立候选品类与评估维度",
+    "优先检查价格稳定、供应普遍的选项",
+    "将口味偏好转换为检索条件",
+    "检查是否存在彼此冲突的偏好",
+    "准备对候选结果进行交叉核验"
+  ];
+
+  const evaluationPool = [
+    "对比主食饱腹度、价格区间与选择成本",
+    "降低信息不完整候选项的置信权重",
+    "将菜单丰富度纳入稳妥性评分",
+    "核对候选项是否覆盖当前口味偏好",
+    "估算下单便利度对最终选择的影响",
+    "重新平衡价格、饱腹感与稳定性",
+    "检查结论是否过度依赖单一来源",
+    "对排名靠前的候选项进行二次评分",
+    "移除综合得分波动较大的选项",
+    "比较保守选择与探索性选择的预期满意度",
+    "根据当前状态提高低决策成本选项的权重",
+    "汇总各来源中一致出现的菜单特征"
+  ];
+
+  const sourcePool = [
+    // Curated source URLs; user-supplied additions may be unverified. No runtime fetching.
+    { url: "https://www.mcdonalds.com.cn/nutrition_calculator", title: "了解营养 · 麦当劳营养计算器", topic: "营养与餐品搭配", group: "nutrition" },
+    { url: "https://www.mcdonalds.com.cn/news/20220801-nutrition-calculator-update", title: "麦当劳的菜单，由你定！", topic: "营养计算器介绍 · 历史资料", group: "nutrition" },
+    { url: "https://www.mcdonalds.com.cn/news/20231129-Nutrition-Caculator/", title: "热量计算器！麦呀太会算了！", topic: "餐品信息查询方式 · 历史资料", group: "nutrition" },
+    { url: "https://mcd.cn/", title: "麦当劳网上订餐", topic: "订餐入口 · 价格需以门店为准", group: "order" },
+    { url: "https://order.kfc.com.cn/", title: "肯德基在线点餐", topic: "订餐入口 · 需要选择餐厅", group: "order" },
+    { url: "https://www.kfc.com.cn/overview.html", title: "肯德基 · 企业责任", topic: "品牌背景资料 · 非餐品菜单", group: "menu" },
+    { url: "https://www.subway.com.cn/657909-657909.html", title: "赛百味 · 菜单", topic: "三明治、能量碗与小食", group: "menu" },
+    { url: "https://www.subway.com.cn/copy_.html", title: "赛百味 · 原料即正义", topic: "食材与原料介绍", group: "menu" },
+    { url: "https://www.subway.com.cn/cooperate.html", title: "赛百味 · 门店覆盖", topic: "门店信息入口 · 未获取用户位置", group: "order" },
+    { url: "https://www.pizzahut.com.cn/phdi/Product", title: "必胜客 · 美味菜单", topic: "比萨与西式餐品参考", group: "menu" },
+    { url: "https://www.pizzahut.com.cn/phdi/Event/Activity/", title: "必胜客 · 热门活动", topic: "活动入口 · 需核对日期与门店", group: "menu" },
+    { url: "https://m.pizzahut.com.cn/StoreList/", title: "必胜客门店查询", topic: "门店入口 · 未获取用户位置", group: "order" },
+    // Supplied by user on 2026-09-08; page content could not be verified by the research tool.
+    { url: "https://houqin.sjtu.edu.cn/web/fwdh/cysy", title: "上海交通大学后勤 · 餐饮服务", topic: "校园餐饮参考入口 · 页面内容待核实", group: "discovery" },
+    { url: "https://ourhome.sjtu.edu.cn/article/1057", title: "2023交大新生入住指南3 · 美食篇", topic: "闵行校区食堂与周边餐饮 · 2023年历史指南", group: "discovery" },
+    { url: "https://www.sialchina.cn/productlist/4990.html", title: "好欢螺干拌螺蛳粉 · 西雅国际食品展", topic: "袋装螺蛳粉产品介绍 · 需自行烹煮", group: "discovery" },
+    { url: "https://www.sialchina.cn/productlist/2622.html", title: "好欢螺 · 原味螺蛳粉 300g", topic: "袋装米粉产品详情", group: "discovery" },
+    { url: "https://www.sialchina.cn/productlist/2624.html", title: "好欢螺 · 加辣加臭螺蛳粉 400g", topic: "酸辣口味产品详情", group: "discovery" },
+    { url: "https://www.sialchina.cn/productlist/4987.html", title: "好欢螺 · 小龙虾味螺蛳粉", topic: "风味米粉产品详情", group: "discovery" },
+    { url: "https://luobawang.jd.com/view_search-1444254-12518507-99-1-20-1.html", title: "螺霸王食品旗舰店 · 干捞粉", topic: "螺蛳粉商品入口 · 售价以商品页为准", group: "discovery" },
+    { url: "https://zh.wikipedia.org/wiki/%E8%9E%BA%E8%9B%B3%E7%B2%89", title: "螺蛳粉 · 风味与配料介绍", topic: "柳州米粉品类资料 · 非门店菜单", group: "discovery" },
+    { url: "https://themeatandwineco.com/menus/%E4%B8%AD%E6%96%87%E8%8F%9C%E5%8D%95/", title: "The Meat & Wine Co · 中文菜单", topic: "牛排餐厅菜单 · 需核对地区与币种", group: "discovery" },
+    { url: "https://themeatandwineco.com/menus/a-la-carte-menu/", title: "The Meat & Wine Co · 单点菜单", topic: "牛排与配菜 · 餐厅参考", group: "discovery" },
+    { url: "https://themeatandwineco.com/menus/express-lunch/", title: "The Meat & Wine Co · 午餐套餐", topic: "午餐菜单 · 需核对供应时段与币种", group: "discovery" },
+    { url: "https://themeatandwineco.com/aged/", title: "The Meat & Wine Co · 熟成牛排", topic: "牛排品类介绍 · 餐厅参考", group: "discovery" }
+  ];
+
+  const resultReasons = [
+    "根据你的口味、饥饿程度、预算以及当前精神状态，系统认为这是今天风险最低、收益最稳定的选择。",
+    "模型已经充分考虑了甜、咸、辣、预算和人生的不确定性，最终得到一个稳定解。",
+    "这是一个经过多轮筛选、交叉验证和必要的复杂计算后得到的高置信度结论。",
+    "经过对数十个变量的综合分析，系统认为这是今天最稳妥的选择。",
+    "在考虑了你的口味偏好、预算限制和当前状态后，系统得出这是一个最优解。",
+    "经过多次模拟和评估，系统认为这是今天最符合你需求的选择。",
+    "综合分析了你的饮食偏好、预算和当前状态，系统认为这是一个高置信度的推荐结果。"
+  ];
+
+  function sample(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  function pickMany(pool, min, max) {
+    const copy = [...pool];
+    const picked = [];
+    const n = randomInt(min, Math.min(max, pool.length));
+    while (picked.length < n && copy.length) {
+      const i = Math.floor(Math.random() * copy.length);
+      picked.push(copy.splice(i, 1)[0]);
+    }
+    return picked;
+  }
+
+  // Increase this multiplier to slow down the entire demo, including card statuses.
+  const playbackTiming = { multiplier: 1.5, minimumPause: 1500 };
+
+  function pause(min = 1250, max = 2450) {
+    const duration = Math.max(playbackTiming.minimumPause,
+      Math.round(randomInt(min, max) * playbackTiming.multiplier));
+    return new Promise(resolve => setTimeout(resolve, duration));
+  }
+
+  function appendLog(kind, message) {
+    const li = document.createElement('li');
+    li.dataset.kind = kind;
+
+    const badge = document.createElement('span');
+    badge.className = 'log-kind';
+    badge.textContent = kind;
+
+    const text = document.createElement('span');
+    text.className = 'log-message';
+    text.textContent = message;
+
+    li.append(badge, text);
+    log.appendChild(li);
+    return text;
+  }
+
+  let logScrollFrame = null;
+  function followLatestLog() {
+    if (logScrollFrame !== null) return;
+    logScrollFrame = requestAnimationFrame(() => {
+      logScrollFrame = null;
+      if (!thinking.classList.contains('show')) return;
+      if (!log.lastElementChild) return;
+      // Change only the scroll alignment; preserve the page's existing spacing.
+      log.lastElementChild.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        block: 'center',
+        inline: 'nearest'
+      });
+    });
+  }
+
+  // Also follow text changes inside an existing source card, not just new log rows.
+  const logObserver = new MutationObserver(followLatestLog);
+  logObserver.observe(log, { childList: true, subtree: true, characterData: true });
+
+  function appendSource(source, query) {
+    const body = appendLog('RETRIEVE', '');
+    body.classList.add('source-card');
+    const link = document.createElement('a');
+    link.href = source.url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = `${source.title} ↗`;
+    const domain = document.createElement('span');
+    domain.className = 'source-domain';
+    const url = new URL(source.url);
+    domain.textContent = `${url.hostname}${decodeURIComponent(url.pathname)}${decodeURIComponent(url.search)}`;
+    domain.title = source.url;
+    const status = document.createElement('span');
+    status.className = 'source-status';
+    status.textContent = '正在打开页面…';
+    const origin = document.createElement('span');
+    origin.className = 'source-domain';
+    origin.textContent = `检索：${query}`;
+    body.append(link, domain, status, origin);
+    return status;
+  }
+
+  const sourceFamilies = {
+    'www.mcdonalds.com.cn': 'mcd', 'mcd.cn': 'mcd',
+    'www.kfc.com.cn': 'kfc', 'order.kfc.com.cn': 'kfc',
+    'www.subway.com.cn': 'subway',
+    'www.pizzahut.com.cn': 'pizza', 'm.pizzahut.com.cn': 'pizza',
+    'houqin.sjtu.edu.cn': 'campus', 'ourhome.sjtu.edu.cn': 'campus',
+    'www.sialchina.cn': 'noodles', 'luobawang.jd.com': 'noodles',
+    'zh.wikipedia.org': 'noodles', 'themeatandwineco.com': 'steak'
+  };
+  const familyNames = {
+    mcd: '麦当劳', kfc: '肯德基', subway: '赛百味', pizza: '必胜客',
+    campus: '上海交通大学食堂', noodles: '螺蛳粉', steak: 'The Meat & Wine Co 牛排'
+  };
+  const familyOf = source => sourceFamilies[new URL(source.url).hostname];
+  const isFastFood = source => ['mcd', 'kfc', 'subway', 'pizza'].includes(familyOf(source));
+
+  function choosePages(pool, count, excluded = new Set()) {
+    const remaining = pool.filter(source => !excluded.has(source.url));
+    const chosen = [];
+    while (chosen.length < count && remaining.length) {
+      const fresh = remaining.filter(source => !lastSourceUrls.includes(source.url));
+      const available = fresh.length ? fresh : remaining;
+      const newFamilies = available.filter(source => !chosen.some(item => familyOf(item) === familyOf(source)));
+      const next = sample(newFamilies.length ? newFamilies : available);
+      chosen.push(next);
+      remaining.splice(remaining.indexOf(next), 1);
+    }
+    return chosen;
+  }
+
+  function selectedText(group) {
+    return [...document.querySelectorAll(`[data-group="${group}"] .chip.active`)]
+      .map(item => item.textContent.trim())
+      .join('、');
+  }
+
+  function buildSearchPlan() {
+    const taste = selectedText('taste') || '咸香';
+    const budget = selectedText('budget') || '常规预算';
+    const discovery = sample(['noodles', 'steak', 'campus']);
+    const discoveries = {
+      noodles: { query: sample(['螺蛳粉 酸辣口味 配料 产品介绍', '好欢螺 螺霸王 螺蛳粉 产品']), reason: '目前参考集中在西式快餐，为了比较不同主食，接下来查看螺蛳粉的口味与配料' },
+      steak: { query: sample(['The Meat and Wine Co 中文菜单 牛排', 'The Meat and Wine Co 午餐套餐 菜单']), reason: '目前参考集中在快餐，为了扩展正餐选项，接下来查看牛排菜单；这份菜单仅作口味参考' },
+      campus: { query: '上海交通大学 后勤 就餐指南 食堂', reason: '目前参考以连锁餐饮为主，因此补充校园食堂资料，比较另一类就餐选择' }
+    };
+    return {
+      budget,
+      paperFocus: choosePaperFocus(taste, Number(hunger.value)),
+      jobs: [
+        { query: `${taste} 汉堡 三明治 比萨 官方菜单`, reason: `你选择了「${taste}」口味，因此先从常见主食菜单中查找候选项`, sources: choosePages(sourcePool.filter(s => isFastFood(s) && s.group === 'menu' && familyOf(s) !== 'kfc'), 2) },
+        { query: '麦当劳 营养计算器 餐品信息', reason: '菜单名称不足以比较份量与营养，因此补充查询餐品营养资料', sources: choosePages(sourcePool.filter(s => s.group === 'nutrition'), 1) },
+        { ...discoveries[discovery], sources: choosePages(sourcePool.filter(s => familyOf(s) === discovery && !s.url.includes('jd.com')), discovery === 'campus' ? 1 : 2) }
+      ]
+    };
+  }
+
+  const paperTopics = [
+    { id: 'satiety', label: '食物质地与饱腹感', terms: '(food AND (texture OR protein) AND (satiety OR satiation))', broad: '(food AND satiety)', keywords: ['satiety', 'satiation', 'texture', 'protein'] },
+    { id: 'taste', label: '味觉与食品偏好', terms: '(food AND (taste OR flavour) AND preference)', broad: '(food AND taste)', keywords: ['taste', 'flavour', 'flavor', 'preference'] },
+    { id: 'choice', label: '便利性与食物选择', terms: '(food AND choice AND (convenience OR price))', broad: '(food AND choice)', keywords: ['convenience', 'price', 'choice', 'cost'] }
+  ];
+
+  function choosePaperFocus(taste, hungerLevel) {
+    const preferred = hungerLevel >= 7 ? paperTopics[0] : /辣|甜|酸/.test(taste) ? paperTopics[1] : paperTopics[2];
+    const topic = Math.random() < .7 ? preferred : sample(paperTopics);
+    return { ...topic, reason: topic === preferred
+      ? `结合已选口味与饥饿程度，补充查看「${topic.label}」研究`
+      : `为扩展比较维度，本轮补充查看「${topic.label}」研究` };
+  }
+
+  function plainAbstract(text) {
+    return String(text || '').replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
+  }
+
+  function screenPapers(records, focus, excluded) {
+    const seen = new Set(excluded);
+    return records.flatMap(paper => {
+      if (!paper.id || paper.source !== 'MED' || !paper.title) return [];
+      const key = String(paper.doi || `${paper.source}:${paper.id}`).toLowerCase();
+      const abstract = plainAbstract(paper.abstractText);
+      const types = Array.isArray(paper.pubTypeList?.pubType) ? paper.pubTypeList.pubType : [];
+      const text = `${paper.title} ${abstract}`.toLowerCase();
+      if (seen.has(key) || abstract.length < 100 || types.some(type => /retract|preprint/i.test(type)) ||
+          /\b(mice|rats|murine|animal model)\b/i.test(text)) return [];
+      const matches = focus.keywords.filter(word => text.includes(word));
+      if (matches.length < 2) return [];
+      seen.add(key);
+      const score = matches.length + focus.keywords.filter(word => paper.title.toLowerCase().includes(word)).length * 2;
+      return [{ ...paper, key, abstract, types, matches, score }];
+    }).sort((a, b) => b.score - a.score);
+  }
+
+  async function fetchPapers(query) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 14000);
+    try {
+      const url = new URL('https://www.ebi.ac.uk/europepmc/webservices/rest/search');
+      url.search = new URLSearchParams({ query, format: 'json', resultType: 'core', pageSize: '12' });
+      const response = await fetch(url, { signal: controller.signal, credentials: 'omit', referrerPolicy: 'no-referrer' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (!Array.isArray(data.resultList?.result)) throw new Error('接口返回格式异常');
+      return data.resultList.result;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  async function researchPapers(focus) {
+    const target = randomInt(2, 3);
+    const collected = [];
+    const seen = new Set();
+    const base = ' AND HAS_ABSTRACT:y AND SRC:MED';
+    const queries = [
+      `TITLE_ABS:${focus.terms} AND PUB_TYPE:review${base}`,
+      `TITLE_ABS:${focus.broad}${base}`
+    ];
+    thinkingTitle.textContent = '正在实时检索食品文献…';
+    appendLog('PLAN', `文献检索依据：${focus.reason}。计划初筛 ${target} 篇有摘要的文献。`).classList.add('decision-note');
+    await pause(1000, 1600);
+    let unavailable = false;
+    for (const [attempt, query] of queries.entries()) {
+      if (collected.length >= target) break;
+      if (attempt) {
+        appendLog('PLAN', unavailable
+          ? '上一条文献请求失败，因此更换为简化检索词再尝试一次'
+          : `当前只保留 ${collected.length} 篇相关文献，因此放宽检索条件补充查找；已获取文献不重复读取`).classList.add('decision-note');
+        await pause(1000, 1700);
+      }
+      const status = appendLog('SEARCH', `实时检索 Europe PMC：「${query}」`);
+      try {
+        const records = await fetchPapers(query);
+        unavailable = false;
+        const eligible = screenPapers(records, focus, seen);
+        status.textContent = `实时检索返回 ${records.length} 条题录；初筛保留 ${eligible.length} 条相关且有摘要的记录`;
+        // Prefer high relevance; vary selection among comparable candidates and across runs.
+        const fresh = eligible.filter(paper => !lastPaperIds.includes(paper.key));
+        const pool = [...fresh, ...eligible.filter(paper => lastPaperIds.includes(paper.key))];
+        while (collected.length < target && pool.length) {
+          const paper = sample(pool.slice(0, 5));
+          pool.splice(pool.indexOf(paper), 1);
+          seen.add(paper.key);
+          collected.push(paper);
+          const source = {
+            title: paper.title,
+            url: `https://europepmc.org/article/MED/${encodeURIComponent(paper.id)}`
+          };
+          const card = appendSource(source, `实时文献 · ${focus.label}`);
+          const journal = paper.journalInfo?.journal?.title || '期刊未提供';
+          card.textContent = `实时获取成功 · ${paper.pubYear || '年份未提供'} · ${journal} · ${paper.authorString || '作者未提供'}`;
+          card.dataset.state = 'complete';
+          await pause(1600, 2400);
+          thinkingTitle.textContent = '正在分析论文摘要…';
+          const sentences = paper.abstract.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [paper.abstract];
+          const sentence = sentences.find(text => focus.keywords.some(word => text.toLowerCase().includes(word))) || sentences[0];
+          const words = sentence.trim().split(/\s+/);
+          const excerpt = words.slice(0, 22).join(' ') + (words.length > 22 ? '…' : '');
+          appendLog('ANALYZE', `「${paper.title}」摘要摘录（原文）：${excerpt}`);
+          await pause(1600, 2400);
+          const design = paper.types.find(type => /meta-analysis|systematic review|randomized controlled trial/i.test(type)) ||
+            paper.types.find(type => /review/i.test(type)) || '题录未明确研究设计';
+          appendLog('ANALYZE', `规则初筛：摘要与标题命中 ${paper.matches.join(' / ')}；研究类型：${design}。这些词说明主题相关，不能据此判断影响方向或因果关系。`);
+          await pause(1300, 2100);
+        }
+      } catch (error) {
+        unavailable = true;
+        const reason = error.name === 'AbortError' ? '请求超时（14 秒）' : error.message;
+        status.textContent = `实时文献请求未完成：${reason}。已跳过本轮文献检索。`;
+        await pause(1200, 1800);
+      }
+    }
+    lastPaperIds = collected.map(paper => paper.key);
+    const summary = collected.length
+      ? `本轮实时获取并初筛 ${collected.length} 篇「${focus.label}」文献，仅检查摘要与题录，未阅读全文；文献不用于证明具体品牌更适合你。`
+      : '本轮未获取到可用论文，文献分析已跳过。';
+    appendLog('VERIFY', summary);
+    document.getElementById('paperSummary').textContent = summary;
+    await pause(1200, 1800);
+    return collected;
+  }
+
+  let fireworksLayer = null;
+  let fireworksTimer = null;
+  function stopFireworks() {
+    clearTimeout(fireworksTimer);
+    fireworksTimer = null;
+    fireworksLayer?.remove();
+    fireworksLayer = null;
+  }
+
+  function launchFireworks() {
+    stopFireworks();
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.hidden) return;
+    const compact = window.innerWidth <= 620;
+    const bursts = compact ? 4 : 5;
+    const sparks = compact ? 18 : 26;
+    const colors = ['#ffcc00', '#ff665e', '#ffb347', '#7edac5'];
+    fireworksLayer = document.createElement('div');
+    fireworksLayer.className = 'fireworks';
+    fireworksLayer.setAttribute('aria-hidden', 'true');
+    for (let burst = 0; burst < bursts; burst++) {
+      const x = 18 + Math.random() * 64;
+      const y = 18 + Math.random() * 42;
+      const radius = (compact ? 65 : 100) + Math.random() * 35;
+      const color = colors[burst % colors.length];
+      for (let i = 0; i < sparks; i++) {
+        const spark = document.createElement('span');
+        spark.className = 'firework-spark';
+        const angle = (i / sparks) * Math.PI * 2;
+        const distance = radius * (.7 + Math.random() * .3);
+        spark.style.left = `${x}%`;
+        spark.style.top = `${y}%`;
+        spark.style.setProperty('--spark-color', color);
+        spark.style.setProperty('--spark-x', `${Math.cos(angle) * distance}px`);
+        spark.style.setProperty('--spark-y', `${Math.sin(angle) * distance}px`);
+        spark.style.setProperty('--spark-delay', `${450 + burst * 320}ms`);
+        fireworksLayer.appendChild(spark);
+      }
+    }
+    document.body.appendChild(fireworksLayer);
+    fireworksTimer = setTimeout(stopFireworks, 3400);
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopFireworks();
+  });
+
+  async function runDecision() {
+    if (running) return;
+    running = true;
+    stopFireworks();
+    result.classList.remove('show');
+    thinking.classList.remove('done');
+    thinking.classList.add('show');
+    thinkingTitle.textContent = '正在规划检索…';
+    log.replaceChildren();
+    document.getElementById('paperSummary').textContent = '';
+    decideBtn.disabled = true;
+    againBtn.disabled = true;
+    decideBtn.textContent = '分析中……';
+    try {
+      // Snapshot preferences before waiting so a run uses one consistent set of inputs.
+      const plan = buildSearchPlan();
+      const sources = plan.jobs.flatMap(job => job.sources);
+      const reserved = new Set(sources.map(source => source.url));
+      const visited = new Set();
+      const completed = [];
+      const priceChecked = new Set();
+      let priceSearches = 0;
+      for (const thought of pickMany(planningPool, 2, 3)) {
+        appendLog('PLAN', thought);
+        await pause(1400, 2300);
+      }
+
+      const failedSources = new Set(pickMany(sources, 0, 2));
+      const failureMessages = [
+        '连接超时 · ERR_CONNECTION_TIMED_OUT',
+        '访问受限 · HTTP 403',
+        '服务暂不可用 · HTTP 503'
+      ];
+      async function search(query, pages, reason) {
+        thinkingTitle.textContent = '正在搜索参考资料…';
+        const explanation = appendLog('PLAN', `下一步依据：${reason}`);
+        explanation.classList.add('decision-note');
+        await pause(700, 1200);
+        const status = appendLog('SEARCH', `正在搜索「${query}」`);
+        await pause(1600, 2700);
+        status.textContent = `「${query}」· 选取 ${pages.length} 个相关页面`;
+        await pause(1000, 1600);
+      }
+
+      async function readSource(source, query, allowFollowUp = true) {
+        if (visited.has(source.url)) return;
+        visited.add(source.url);
+        thinkingTitle.textContent = '正在读取网页…';
+        const status = appendSource(source, query);
+        await pause(1600, 2400);
+        if (failedSources.has(source)) {
+          status.textContent = '等待页面响应…';
+          await pause(2200, 3400);
+          status.dataset.state = 'failed';
+          status.textContent = `访问失败 · ${sample(failureMessages)} · 已跳过`;
+          await pause(1400, 2200);
+          const family = familyOf(source);
+          const excluded = new Set([...reserved, ...visited]);
+          const alternatives = choosePages(sourcePool.filter(item => familyOf(item) === family), 1, excluded);
+          if (alternatives.length) {
+            reserved.add(alternatives[0].url);
+            const retryQuery = `${familyNames[family]} ${alternatives[0].group === 'order' ? '订餐 门店查询' : '相关资料 菜单 产品介绍'}`;
+            await search(retryQuery, alternatives,
+              `「${source.title}」访问失败，无法提供参考，因此改查「${alternatives[0].title}」`);
+            await readSource(alternatives[0], retryQuery, allowFollowUp);
+          } else {
+            const explanation = appendLog('ANALYZE', `「${source.title}」访问失败，且暂无未访问的同类替代页，因此保留信息缺口，继续其他检索`);
+            explanation.classList.add('decision-note');
+            await pause(900, 1500);
+          }
+          return;
+        }
+        status.textContent = sample(['正在整理页面信息…', '正在定位相关内容…', '正在检查页面类型…']);
+        await pause(1800, 2800);
+        status.textContent = `已整理 · ${source.topic}`;
+        status.dataset.state = 'complete';
+        completed.push(source);
+        await pause(1200, 1800);
+
+        // Follow-ups are driven by curated page types, not invented live extraction.
+        const family = familyOf(source);
+        const priceGap = source.group === 'menu' || source.group === 'nutrition' ||
+          (family === 'noodles' && !source.url.includes('jd.com'));
+        if (allowFollowUp && priceGap && priceSearches < 2 && !priceChecked.has(family)) {
+          priceChecked.add(family);
+          const pricePages = sourcePool.filter(item => familyOf(item) === family &&
+            (item.group === 'order' || item.url.includes('jd.com')));
+          const extra = choosePages(pricePages, 1, new Set([...reserved, ...visited]));
+          if (extra.length) {
+            priceSearches++;
+            reserved.add(extra[0].url);
+            const priceQuery = `${familyNames[family]} ${plan.budget === '不看价格' ? '单人餐' : plan.budget} ${family === 'noodles' ? '商品 价格' : '订餐 门店 价格'}`;
+            await search(priceQuery, extra,
+              `「${source.title}」不足以确认当前售价，因此补查「${extra[0].title}」，寻找${family === 'noodles' ? '商品价格' : '订餐或门店信息'}`);
+            await readSource(extra[0], priceQuery, false);
+            appendLog('ANALYZE', '已补充查询入口；实际价格、供应范围仍需在对应页面确认');
+            await pause(700, 1100);
+          }
+        }
+      }
+
+      for (const job of plan.jobs) {
+        await search(job.query, job.sources, job.reason);
+        for (const source of job.sources) await readSource(source, job.query);
+      }
+      lastSourceUrls = [...visited];
+
+      await researchPapers(plan.paperFocus);
+
+      thinkingTitle.textContent = '正在分析与比较…';
+      if (failedSources.size) {
+        appendLog('ANALYZE', `已跳过 ${failedSources.size} 个访问失败的页面，整理 ${completed.length} 个已完成来源（含补搜）`);
+        await pause(1000, 1600);
+      }
+      for (const thought of pickMany(evaluationPool, 3, 4)) {
+        appendLog('ANALYZE', thought);
+        await pause(1700, 2800);
+      }
+
+      thinkingTitle.textContent = '正在核对结果…';
+      appendLog('VERIFY', sample([
+        '区分历史介绍与当前订餐入口，价格与库存需以门店为准',
+        '检查来源适用范围，不将品牌介绍作为实时门店信息',
+        '核对信息时效，不将历史活动价格用于当前比较'
+      ]));
+      await pause(1700, 2600);
+      appendLog('VERIFY', '检查完成，正在整理推荐结果');
+      await pause(1200, 1900);
+
+      thinkingTitle.textContent = '检索完成';
+      thinking.classList.add('done');
+      resultReason.textContent = sample(resultReasons);
+      result.classList.add('show');
+      result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      launchFireworks();
+    } catch (error) {
+      thinkingTitle.textContent = '检索未完成，请重新分析';
+      thinking.classList.add('done');
+      console.error('Decision demo failed:', error);
+    } finally {
+      running = false;
+      decideBtn.disabled = false;
+      againBtn.disabled = false;
+      decideBtn.textContent = '开始分析';
+    }
+  }
+
+  decideBtn.addEventListener('click', runDecision);
+
+  againBtn.addEventListener('click', () => {
+    runDecision();
+  });
+
+</script>
+</body>
+</html>
