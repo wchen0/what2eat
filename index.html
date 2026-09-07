@@ -7,6 +7,7 @@
 <meta name="description" content="一个非常认真地帮你决定今天吃什么的网站。" />
 <style>
   :root{
+    color-scheme:light;
     --bg:#fff8ef;
     --card:#ffffff;
     --text:#1f1f1f;
@@ -127,7 +128,14 @@
   }
 
   .chip{
-    border:1px solid var(--line);
+    appearance:none;
+    -webkit-appearance:none;
+    -webkit-text-fill-color:currentColor;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    min-height:44px;
+    border:2px solid var(--line);
     background:#fff;
     color:#4a4540;
     padding:10px 14px;
@@ -146,6 +154,18 @@
     color:#fff;
     border-color:#201f1d;
   }
+  .chip::before{
+    content:"";
+    width:6px;
+    height:10px;
+    flex-shrink:0;
+    border-right:2px solid currentColor;
+    border-bottom:2px solid currentColor;
+    transform:translateY(-2px) rotate(45deg);
+    opacity:0;
+  }
+  .chip.active::before{opacity:1}
+  .chip:focus-visible{outline:3px solid #b47700;outline-offset:3px}
 
   .range-wrap{
     display:grid;
@@ -456,6 +476,37 @@
     .firework-spark{animation:none}
   }
 
+  @media(prefers-color-scheme:dark){
+    :root{
+      color-scheme:dark;
+      --bg:#171614;
+      --card:#24221f;
+      --text:#f5f0e9;
+      --muted:#bfb6ab;
+      --line:#514a42;
+    }
+    body{background:radial-gradient(circle at 15% 10%,rgba(255,204,0,.06),transparent 28%),var(--bg)}
+    .card{background:var(--card);border-color:var(--line)}
+    .eyebrow{background:#292621;border-color:var(--line)}
+    .chip{background:#292621;color:#e8e0d5;border-color:#74695b}
+    .chip:hover{border-color:#c6ab7d}
+    .chip.active{background:#ffcc00;color:#211a00;border-color:#ffdf62;font-weight:750}
+    .chip:focus-visible{outline-color:#ffdf62}
+    .hint,.range-end,footer{color:#bfb6ab}
+    input[type="range"]{accent-color:#ffcc00}
+    button.primary{background:#ffcc00;color:#211a00}
+    .secondary{background:#302c27;color:#f5f0e9}
+    .thinking{background:#1d1b18}
+    .thinking-note,.source-domain,.simulation-badge{color:#c5bcae}
+    .simulation-badge,.source-card{background:#292621;border-color:var(--line)}
+    .log,.source-status{color:#d4cbbf}
+    .source-card a{color:#a9d0ff}
+    .source-status[data-state="failed"]{color:#ffab98}
+    .decision-note{background:#342d22;color:#edddbf;border-color:#b9aa8e}
+    .result{background:radial-gradient(circle at 50% 0%,rgba(255,204,0,.10),transparent 38%),#24211c}
+    .result p{color:#d4cbbf}
+  }
+
   @media (max-width:620px){
     .page{padding-top:24px}
     .form,.thinking,.result{padding-left:20px;padding-right:20px}
@@ -607,6 +658,7 @@
     const single = group.classList.contains('single');
 
     group.querySelectorAll('.chip').forEach(chip => {
+      chip.setAttribute('aria-pressed', String(chip.classList.contains('active')));
       chip.addEventListener('click', () => {
         if (single) {
           group.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
@@ -616,6 +668,9 @@
           const activeCount = group.querySelectorAll('.chip.active').length;
           if (activeCount === 0) chip.classList.add('active');
         }
+        group.querySelectorAll('.chip').forEach(item => {
+          item.setAttribute('aria-pressed', String(item.classList.contains('active')));
+        });
       });
     });
   });
@@ -704,12 +759,12 @@
     return picked;
   }
 
-  // Increase this multiplier to slow down the entire demo, including card statuses.
-  const playbackTiming = { multiplier: 1.5, minimumPause: 1500 };
+  // Routine transitions move faster; important explanations retain reading time.
+  const playbackTiming = { multiplier: .9, minimumPause: 900, readingMultiplier: 1.2, readingMinimum: 1800 };
 
-  function pause(min = 1250, max = 2450) {
-    const duration = Math.max(playbackTiming.minimumPause,
-      Math.round(randomInt(min, max) * playbackTiming.multiplier));
+  function pause(min = 1250, max = 2450, reading = false) {
+    const duration = Math.max(reading ? playbackTiming.readingMinimum : playbackTiming.minimumPause,
+      Math.round(randomInt(min, max) * (reading ? playbackTiming.readingMultiplier : playbackTiming.multiplier)));
     return new Promise(resolve => setTimeout(resolve, duration));
   }
 
@@ -894,7 +949,7 @@
     ];
     thinkingTitle.textContent = '正在实时检索食品文献…';
     appendLog('PLAN', `文献检索依据：${focus.reason}。计划初筛 ${target} 篇有摘要的文献。`).classList.add('decision-note');
-    await pause(1000, 1600);
+    await pause(1000, 1600, true);
     let unavailable = false;
     for (const [attempt, query] of queries.entries()) {
       if (collected.length >= target) break;
@@ -902,7 +957,7 @@
         appendLog('PLAN', unavailable
           ? '上一条文献请求失败，因此更换为简化检索词再尝试一次'
           : `当前只保留 ${collected.length} 篇相关文献，因此放宽检索条件补充查找；已获取文献不重复读取`).classList.add('decision-note');
-        await pause(1000, 1700);
+        await pause(1000, 1700, true);
       }
       const status = appendLog('SEARCH', `实时检索 Europe PMC：「${query}」`);
       try {
@@ -926,18 +981,18 @@
           const journal = paper.journalInfo?.journal?.title || '期刊未提供';
           card.textContent = `实时获取成功 · ${paper.pubYear || '年份未提供'} · ${journal} · ${paper.authorString || '作者未提供'}`;
           card.dataset.state = 'complete';
-          await pause(1600, 2400);
+          await pause(1600, 2400, true);
           thinkingTitle.textContent = '正在分析论文摘要…';
           const sentences = paper.abstract.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [paper.abstract];
           const sentence = sentences.find(text => focus.keywords.some(word => text.toLowerCase().includes(word))) || sentences[0];
           const words = sentence.trim().split(/\s+/);
           const excerpt = words.slice(0, 22).join(' ') + (words.length > 22 ? '…' : '');
           appendLog('ANALYZE', `「${paper.title}」摘要摘录（原文）：${excerpt}`);
-          await pause(1600, 2400);
+          await pause(1600, 2400, true);
           const design = paper.types.find(type => /meta-analysis|systematic review|randomized controlled trial/i.test(type)) ||
             paper.types.find(type => /review/i.test(type)) || '题录未明确研究设计';
           appendLog('ANALYZE', `规则初筛：摘要与标题命中 ${paper.matches.join(' / ')}；研究类型：${design}。这些词说明主题相关，不能据此判断影响方向或因果关系。`);
-          await pause(1300, 2100);
+          await pause(1300, 2100, true);
         }
       } catch (error) {
         unavailable = true;
@@ -952,7 +1007,7 @@
       : '本轮未获取到可用论文，文献分析已跳过。';
     appendLog('VERIFY', summary);
     document.getElementById('paperSummary').textContent = summary;
-    await pause(1200, 1800);
+    await pause(1200, 1800, true);
     return collected;
   }
 
@@ -1039,11 +1094,11 @@
         thinkingTitle.textContent = '正在搜索参考资料…';
         const explanation = appendLog('PLAN', `下一步依据：${reason}`);
         explanation.classList.add('decision-note');
-        await pause(700, 1200);
+        await pause(700, 1200, true);
         const status = appendLog('SEARCH', `正在搜索「${query}」`);
         await pause(1600, 2700);
         status.textContent = `「${query}」· 选取 ${pages.length} 个相关页面`;
-        await pause(1000, 1600);
+        await pause(1000, 1600, true);
       }
 
       async function readSource(source, query, allowFollowUp = true) {
@@ -1057,7 +1112,7 @@
           await pause(2200, 3400);
           status.dataset.state = 'failed';
           status.textContent = `访问失败 · ${sample(failureMessages)} · 已跳过`;
-          await pause(1400, 2200);
+          await pause(1400, 2200, true);
           const family = familyOf(source);
           const excluded = new Set([...reserved, ...visited]);
           const alternatives = choosePages(sourcePool.filter(item => familyOf(item) === family), 1, excluded);
@@ -1070,7 +1125,7 @@
           } else {
             const explanation = appendLog('ANALYZE', `「${source.title}」访问失败，且暂无未访问的同类替代页，因此保留信息缺口，继续其他检索`);
             explanation.classList.add('decision-note');
-            await pause(900, 1500);
+            await pause(900, 1500, true);
           }
           return;
         }
@@ -1079,7 +1134,7 @@
         status.textContent = `已整理 · ${source.topic}`;
         status.dataset.state = 'complete';
         completed.push(source);
-        await pause(1200, 1800);
+        await pause(1200, 1800, true);
 
         // Follow-ups are driven by curated page types, not invented live extraction.
         const family = familyOf(source);
@@ -1127,9 +1182,9 @@
         '检查来源适用范围，不将品牌介绍作为实时门店信息',
         '核对信息时效，不将历史活动价格用于当前比较'
       ]));
-      await pause(1700, 2600);
+      await pause(1700, 2600, true);
       appendLog('VERIFY', '检查完成，正在整理推荐结果');
-      await pause(1200, 1900);
+      await pause(1200, 1900, true);
 
       thinkingTitle.textContent = '检索完成';
       thinking.classList.add('done');
