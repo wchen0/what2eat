@@ -731,13 +731,13 @@
   ];
 
   const resultReasons = [
-    "根据你的口味、饥饿程度、预算以及当前精神状态，系统认为这是今天风险最低、收益最稳定的选择。",
-    "模型已经充分考虑了甜、咸、辣、预算和人生的不确定性，最终得到一个稳定解。",
-    "这是一个经过多轮筛选、交叉验证和必要的复杂计算后得到的高置信度结论。",
-    "经过对数十个变量的综合分析，系统认为这是今天最稳妥的选择。",
-    "在考虑了你的口味偏好、预算限制和当前状态后，系统得出这是一个最优解。",
-    "经过多次模拟和评估，系统认为这是今天最符合你需求的选择。",
-    "综合分析了你的饮食偏好、预算和当前状态，系统认为这是一个高置信度的推荐结果。"
+    "根据你的口味、饥饿程度、预算以及当前精神状态，系统认为这是今天风险最低、收益最稳定的选择。多试几次，也许宇宙会改变主意。",
+    "模型已经充分考虑了甜、咸、辣、预算和人生的不确定性，最终得到一个稳定解。多试几次，也许宇宙会改变主意。",
+    "这是一个经过多轮筛选、交叉验证和必要的复杂计算后得到的高置信度结论。多试几次，也许宇宙会改变主意。",
+    "经过对数十个变量的综合分析，系统认为这是今天最稳妥的选择。多试几次，也许宇宙会改变主意。",
+    "在考虑了你的口味偏好、预算限制和当前状态后，系统得出这是一个最优解。多试几次，也许宇宙会改变主意。",
+    "经过多次模拟和评估，系统认为这是今天最符合你需求的选择。多试几次，也许宇宙会改变主意。",
+    "综合分析了你的饮食偏好、预算和当前状态，系统认为这是一个高置信度的推荐结果。多试几次，也许宇宙会改变主意。"
   ];
 
   function sample(arr) {
@@ -760,7 +760,7 @@
   }
 
   // Routine transitions move faster; important explanations retain reading time.
-  const playbackTiming = { multiplier: .9, minimumPause: 900, readingMultiplier: 1.2, readingMinimum: 1800 };
+  const playbackTiming = { multiplier: .72, minimumPause: 720, readingMultiplier: .96, readingMinimum: 1440 };
 
   function pause(min = 1250, max = 2450, reading = false) {
     const duration = Math.max(reading ? playbackTiming.readingMinimum : playbackTiming.minimumPause,
@@ -867,7 +867,9 @@
   function buildSearchPlan() {
     const taste = selectedText('taste') || '咸香';
     const budget = selectedText('budget') || '常规预算';
-    const discovery = sample(['noodles', 'steak', 'campus']);
+    // Additional food categories: noodles 60%, steak 20%, campus 20%.
+    const discoveryRoll = Math.random();
+    const discovery = discoveryRoll < .6 ? 'noodles' : discoveryRoll < .8 ? 'steak' : 'campus';
     const discoveries = {
       noodles: { query: sample(['螺蛳粉 酸辣口味 配料 产品介绍', '好欢螺 螺霸王 螺蛳粉 产品']), reason: '目前参考集中在西式快餐，为了比较不同主食，接下来查看螺蛳粉的口味与配料' },
       steak: { query: sample(['The Meat and Wine Co 中文菜单 牛排', 'The Meat and Wine Co 午餐套餐 菜单']), reason: '目前参考集中在快餐，为了扩展正餐选项，接下来查看牛排菜单；这份菜单仅作口味参考' },
@@ -938,7 +940,20 @@
     }
   }
 
-  async function researchPapers(focus) {
+  function paperTransition(focus, sources) {
+    const examples = [...new Set(sources.map(source => source.title))].slice(-2);
+    const context = examples.length
+      ? `刚才整理了「${examples.join('」「')}」等餐饮资料，接下来补充一个比较维度。`
+      : '本轮餐饮资料不完整，接下来补充与饮食选择有关的一般研究。';
+    const questions = {
+      satiety: '菜单和餐品介绍不能直接说明食物质地与饱腹感的关系',
+      taste: '餐品口味介绍不能直接说明味觉如何影响食物偏好',
+      choice: '订餐与菜单页面不能直接解释价格、便利性如何影响选择'
+    };
+    return `${context}${questions[focus.id]}，因此转向「${focus.label}」文献，查看相关研究背景。`;
+  }
+
+  async function researchPapers(focus, sources = []) {
     const target = randomInt(2, 3);
     const collected = [];
     const seen = new Set();
@@ -947,9 +962,12 @@
       `TITLE_ABS:${focus.terms} AND PUB_TYPE:review${base}`,
       `TITLE_ABS:${focus.broad}${base}`
     ];
-    thinkingTitle.textContent = '正在实时检索食品文献…';
-    appendLog('PLAN', `文献检索依据：${focus.reason}。计划初筛 ${target} 篇有摘要的文献。`).classList.add('decision-note');
+    thinkingTitle.textContent = '餐饮资料已整理，准备补充研究依据…';
+    appendLog('PLAN', paperTransition(focus, sources)).classList.add('decision-note');
+    await pause(2200, 2800, true);
+    appendLog('PLAN', `接下来实时查询 Europe PMC，初筛 ${target} 篇有摘要的文献；只补充研究背景，不据此判定品牌优劣。`);
     await pause(1000, 1600, true);
+    thinkingTitle.textContent = '正在实时检索食品文献…';
     let unavailable = false;
     for (const [attempt, query] of queries.entries()) {
       if (collected.length >= target) break;
@@ -1003,7 +1021,7 @@
     }
     lastPaperIds = collected.map(paper => paper.key);
     const summary = collected.length
-      ? `本轮实时获取并初筛 ${collected.length} 篇「${focus.label}」文献，仅检查摘要与题录，未阅读全文；文献不用于证明具体品牌更适合你。`
+      ? `本轮实时获取并初筛 ${collected.length} 篇「${focus.label}」文献；文献不用于证明具体品牌更适合你。`
       : '本轮未获取到可用论文，文献分析已跳过。';
     appendLog('VERIFY', summary);
     document.getElementById('paperSummary').textContent = summary;
@@ -1164,7 +1182,7 @@
       }
       lastSourceUrls = [...visited];
 
-      await researchPapers(plan.paperFocus);
+      await researchPapers(plan.paperFocus, completed);
 
       thinkingTitle.textContent = '正在分析与比较…';
       if (failedSources.size) {
