@@ -380,6 +380,18 @@
     line-height:1.7;
   }
 
+  .result-confidence{
+    display:inline-block;
+    margin-top:16px;
+    padding:8px 14px;
+    border:1px solid rgba(111,87,0,.18);
+    border-radius:999px;
+    background:rgba(255,241,186,.55);
+    color:#6f5700;
+    font-size:14px;
+    font-weight:800;
+  }
+
   .logo-wrap{
     margin:30px auto 22px;
     width:min(360px, 100%);
@@ -434,6 +446,63 @@
     padding:11px 14px;
     font-weight:700;
     cursor:pointer;
+  }
+
+  .result-actions #againBtn{order:1}
+  .result-actions #reviewsBtn{order:2}
+
+  .review-modal[hidden]{display:none}
+  .review-modal{
+    position:fixed;
+    inset:0;
+    z-index:200;
+    display:grid;
+    place-items:center;
+    padding:24px;
+    background:rgba(18,16,14,.78);
+  }
+
+  .review-modal-content{
+    position:relative;
+    display:grid;
+    place-items:center;
+    width:min(92vw, 760px);
+    max-height:calc(100vh - 48px);
+    padding:12px;
+    border:1px solid rgba(255,255,255,.2);
+    border-radius:18px;
+    background:#171614;
+    box-shadow:0 24px 70px rgba(0,0,0,.42);
+  }
+
+  .review-modal img{
+    display:block;
+    width:auto;
+    max-width:100%;
+    max-height:calc(100vh - 72px);
+    object-fit:contain;
+    border-radius:10px;
+  }
+
+  .review-modal-close{
+    position:absolute;
+    top:8px;
+    right:8px;
+    z-index:1;
+    width:36px;
+    height:36px;
+    border:1px solid rgba(255,255,255,.32);
+    border-radius:50%;
+    background:rgba(0,0,0,.62);
+    color:#fff;
+    font-size:24px;
+    line-height:1;
+    cursor:pointer;
+  }
+
+  .review-modal-close:focus-visible{
+    outline:3px solid #ffcc00;
+    outline-offset:2px;
   }
 
   footer{
@@ -612,6 +681,8 @@
           根据你的口味、饥饿程度、预算以及当前精神状态，系统认为这是今天风险最低、收益最稳定的选择。
         </p>
 
+        <div class="result-confidence" id="resultConfidence" aria-live="polite">置信度: 80.00%</div>
+
         <div class="logo-wrap">
           <img
             class="golden-arches"
@@ -624,6 +695,7 @@
         </div>
 
         <div class="result-actions">
+          <button class="secondary" id="reviewsBtn" type="button">查看用户好评</button>
           <button class="secondary" id="againBtn" type="button">重新分析一次</button>
         </div>
         <p id="paperSummary" class="thinking-note"></p>
@@ -636,6 +708,14 @@
     </footer>
   </main>
 
+  <div class="review-modal" id="reviewModal" role="dialog" aria-modal="true" aria-labelledby="reviewModalTitle" hidden>
+    <div class="review-modal-content">
+      <button class="review-modal-close" id="reviewModalClose" type="button" aria-label="关闭用户好评">×</button>
+      <h2 id="reviewModalTitle" hidden>用户好评</h2>
+      <img src="assets/comments.jpg" alt="用户好评截图" />
+    </div>
+  </div>
+
 <script>
   const hunger = document.getElementById('hunger');
   const hungerValue = document.getElementById('hungerValue');
@@ -644,7 +724,11 @@
   const log = document.getElementById('log');
   const result = document.getElementById('result');
   const resultReason = document.getElementById('resultReason');
+  const resultConfidence = document.getElementById('resultConfidence');
   const againBtn = document.getElementById('againBtn');
+  const reviewsBtn = document.getElementById('reviewsBtn');
+  const reviewModal = document.getElementById('reviewModal');
+  const reviewModalClose = document.getElementById('reviewModalClose');
   const thinkingTitle = document.getElementById('thinkingTitle');
   let running = false;
   let lastSourceUrls = [];
@@ -715,6 +799,16 @@
     { url: "https://www.pizzahut.com.cn/phdi/Product", title: "必胜客 · 美味菜单", topic: "比萨与西式餐品参考", group: "menu" },
     { url: "https://www.pizzahut.com.cn/phdi/Event/Activity/", title: "必胜客 · 热门活动", topic: "活动入口 · 需核对日期与门店", group: "menu" },
     { url: "https://m.pizzahut.com.cn/StoreList/", title: "必胜客门店查询", topic: "门店入口 · 未获取用户位置", group: "order" },
+    // Popular restaurant and beverage brands; official menus or brand pages.
+    { url: "https://www.starbucks.com.cn/menu/", title: "星巴克中国 · 饮料菜单", topic: "咖啡、茶饮与季节限定菜单", group: "menu" },
+    { url: "https://www.luckincoffee.com/cn/menu/signature-lattes", title: "瑞幸咖啡 · 招牌饮品", topic: "咖啡与季节限定饮品", group: "menu" },
+    { url: "https://www.haidilao.com/cate/", title: "海底捞 · 菜品菜单", topic: "火锅锅底、涮菜与特色小吃", group: "menu" },
+    { url: "https://www.chabaidao.com/m/index/index.html", title: "茶百道 · 官方产品页", topic: "新式茶饮与水果茶", group: "menu" },
+    { url: "https://www.naixue.com/", title: "奈雪的茶 · 官方产品页", topic: "现制茶饮与软欧包", group: "menu" },
+    { url: "https://www.mxbc.com/", title: "蜜雪冰城 · 官方网站", topic: "冰淇淋、果饮与茶饮", group: "menu" },
+    { url: "https://www.lxjchina.com.cn/", title: "老乡鸡 · 官方菜品页", topic: "中式快餐与家常菜", group: "menu" },
+    { url: "https://www.tasiting.com/product/category/drink", title: "塔斯汀 · 塔塔美食", topic: "中国汉堡、小食与饮品", group: "menu" },
+    { url: "https://chagee.com.hk/", title: "霸王茶姬 · 官方网站", topic: "东方茶饮与鲜奶茶", group: "menu" },
     // Supplied by user on 2026-09-08; page content could not be verified by the research tool.
     { url: "https://houqin.sjtu.edu.cn/web/fwdh/cysy", title: "上海交通大学后勤 · 餐饮服务", topic: "校园餐饮参考入口 · 页面内容待核实", group: "discovery" },
     { url: "https://ourhome.sjtu.edu.cn/article/1057", title: "2023交大新生入住指南3 · 美食篇", topic: "闵行校区食堂与周边餐饮 · 2023年历史指南", group: "discovery" },
@@ -833,16 +927,27 @@
     'www.kfc.com.cn': 'kfc', 'order.kfc.com.cn': 'kfc',
     'www.subway.com.cn': 'subway',
     'www.pizzahut.com.cn': 'pizza', 'm.pizzahut.com.cn': 'pizza',
+    'www.starbucks.com.cn': 'starbucks', 'www.luckincoffee.com': 'luckin',
+    'www.haidilao.com': 'haidilao', 'www.chabaidao.com': 'chabaidao',
+    'www.naixue.com': 'naixue', 'www.mxbc.com': 'mixue',
+    'www.lxjchina.com.cn': 'laoxiangji', 'www.tasiting.com': 'tastien',
+    'chagee.com.hk': 'chagee',
     'houqin.sjtu.edu.cn': 'campus', 'ourhome.sjtu.edu.cn': 'campus',
     'www.sialchina.cn': 'noodles', 'luobawang.jd.com': 'noodles',
     'zh.wikipedia.org': 'noodles', 'themeatandwineco.com': 'steak'
   };
   const familyNames = {
+    starbucks: '星巴克', luckin: '瑞幸咖啡', haidilao: '海底捞', chabaidao: '茶百道',
+    naixue: '奈雪的茶', mixue: '蜜雪冰城', laoxiangji: '老乡鸡', tastien: '塔斯汀', chagee: '霸王茶姬',
     mcd: '麦当劳', kfc: '肯德基', subway: '赛百味', pizza: '必胜客',
     campus: '上海交通大学食堂', noodles: '螺蛳粉', steak: 'The Meat & Wine Co 牛排'
   };
   const familyOf = source => sourceFamilies[new URL(source.url).hostname];
-  const isFastFood = source => ['mcd', 'kfc', 'subway', 'pizza'].includes(familyOf(source));
+  const isFastFood = source => [
+    'mcd', 'kfc', 'subway', 'pizza',
+    'starbucks', 'luckin', 'haidilao', 'chabaidao', 'naixue',
+    'mixue', 'laoxiangji', 'tastien', 'chagee'
+  ].includes(familyOf(source));
 
   function choosePages(pool, count, excluded = new Set()) {
     const remaining = pool.filter(source => !excluded.has(source.url));
@@ -850,8 +955,13 @@
     while (chosen.length < count && remaining.length) {
       const fresh = remaining.filter(source => !lastSourceUrls.includes(source.url));
       const available = fresh.length ? fresh : remaining;
-      const newFamilies = available.filter(source => !chosen.some(item => familyOf(item) === familyOf(source)));
-      const next = sample(newFamilies.length ? newFamilies : available);
+      const availableFamilies = [...new Set(available.map(familyOf))];
+      const newFamilies = availableFamilies.filter(family =>
+        !chosen.some(item => familyOf(item) === family)
+      );
+      const family = sample(newFamilies.length ? newFamilies : availableFamilies);
+      const familyPages = available.filter(source => familyOf(source) === family);
+      const next = sample(familyPages.length ? familyPages : available);
       chosen.push(next);
       remaining.splice(remaining.indexOf(next), 1);
     }
@@ -867,21 +977,29 @@
   function buildSearchPlan() {
     const taste = selectedText('taste') || '咸香';
     const budget = selectedText('budget') || '常规预算';
-    // Additional food categories: noodles 60%, steak 20%, campus 20%.
-    const discoveryRoll = Math.random();
-    const discovery = discoveryRoll < .6 ? 'noodles' : discoveryRoll < .8 ? 'steak' : 'campus';
+    // Additional food categories: noodles, steak, and campus are selected evenly.
+    const discovery = ['noodles', 'steak', 'campus'][randomInt(0, 2)];
     const discoveries = {
-      noodles: { query: sample(['螺蛳粉 酸辣口味 配料 产品介绍', '好欢螺 螺霸王 螺蛳粉 产品']), reason: '目前参考集中在西式快餐，为了比较不同主食，接下来查看螺蛳粉的口味与配料' },
-      steak: { query: sample(['The Meat and Wine Co 中文菜单 牛排', 'The Meat and Wine Co 午餐套餐 菜单']), reason: '目前参考集中在快餐，为了扩展正餐选项，接下来查看牛排菜单；这份菜单仅作口味参考' },
-      campus: { query: '上海交通大学 后勤 就餐指南 食堂', reason: '目前参考以连锁餐饮为主，因此补充校园食堂资料，比较另一类就餐选择' }
+      noodles: {
+        query: sample(['螺蛳粉 酸辣口味 配料 产品介绍', '螺霸王 螺蛳粉 菜单 产品']),
+        reason: '这一轮补充地方风味主食，重点查看螺蛳粉的口味、配料和可选产品。'
+      },
+      steak: {
+        query: sample(['牛排 餐厅 中文菜单', '牛排 餐厅 午餐套餐 菜单']),
+        reason: '这一轮补充正餐选项，重点查看牛排餐厅的菜单与套餐，扩大主食选择范围。'
+      },
+      campus: {
+        query: '上海交通大学 后勤 餐饮 食堂',
+        reason: '这一轮补充校园餐饮参考，重点查看食堂和周边餐饮信息，增加日常就餐选项。'
+      }
     };
     return {
       budget,
       paperFocus: choosePaperFocus(taste, Number(hunger.value)),
       jobs: [
-        { query: `${taste} 汉堡 三明治 比萨 官方菜单`, reason: `你选择了「${taste}」口味，因此先从常见主食菜单中查找候选项`, sources: choosePages(sourcePool.filter(s => isFastFood(s) && s.group === 'menu' && familyOf(s) !== 'kfc'), 2) },
+        { query: `${taste} 热门餐饮 官方菜单`, reason: `你选择了「${taste}」口味，因此先从热门餐饮品牌菜单中查找候选项`, sources: choosePages(sourcePool.filter(s => isFastFood(s) && s.group === 'menu'), 2) },
         { query: '麦当劳 营养计算器 餐品信息', reason: '菜单名称不足以比较份量与营养，因此补充查询餐品营养资料', sources: choosePages(sourcePool.filter(s => s.group === 'nutrition'), 1) },
-        { ...discoveries[discovery], sources: choosePages(sourcePool.filter(s => familyOf(s) === discovery && !s.url.includes('jd.com')), discovery === 'campus' ? 1 : 2) }
+        { ...discoveries[discovery], sources: choosePages(sourcePool.filter(s => familyOf(s) === discovery && !s.url.includes('jd.com')), 2) }
       ]
     };
   }
@@ -954,7 +1072,7 @@
   }
 
   async function researchPapers(focus, sources = []) {
-    const target = randomInt(2, 3);
+    const target = randomInt(1, 2);
     const collected = [];
     const seen = new Set();
     const base = ' AND HAS_ABSTRACT:y AND SRC:MED';
@@ -1207,6 +1325,7 @@
       thinkingTitle.textContent = '检索完成';
       thinking.classList.add('done');
       resultReason.textContent = sample(resultReasons);
+      resultConfidence.textContent = `置信度: ${(randomInt(8000, 9800) / 100).toFixed(2)}%`;
       result.classList.add('show');
       result.scrollIntoView({ behavior: 'smooth', block: 'start' });
       launchFireworks();
@@ -1226,6 +1345,28 @@
 
   againBtn.addEventListener('click', () => {
     runDecision();
+  });
+
+  function closeReviews() {
+    reviewModal.hidden = true;
+    document.body.style.overflow = '';
+    reviewsBtn.focus();
+  }
+
+  reviewsBtn.addEventListener('click', () => {
+    reviewModal.hidden = false;
+    document.body.style.overflow = 'hidden';
+    reviewModalClose.focus();
+  });
+
+  reviewModalClose.addEventListener('click', closeReviews);
+
+  reviewModal.addEventListener('click', event => {
+    if (event.target === reviewModal) closeReviews();
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !reviewModal.hidden) closeReviews();
   });
 
 </script>
