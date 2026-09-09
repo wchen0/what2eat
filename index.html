@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>今天吃什么？</title>
 <meta name="description" content="一个非常认真地帮你决定今天吃什么的网站。" />
+<link rel="icon" href="favicon.ico" sizes="any" />
 <style>
   :root{
     color-scheme:light;
@@ -680,7 +681,7 @@
         <div class="result-kicker">综合推荐结果</div>
         <h2>麦当劳</h2>
         <p id="resultReason">
-          根据你的口味、饥饿程度、预算以及当前精神状态，系统认为这是今天风险最低、收益最稳定的选择。
+          这不是唯一正确答案，不过就你现在的状态看，它是更省心的一项。
         </p>
 
         <div class="result-confidence" id="resultConfidence" aria-live="polite">置信度: 80.00%</div>
@@ -762,29 +763,29 @@
   });
 
   const planningPool = [
-    "读取已选口味、预算与当前状态",
-    "整理硬性约束与可放宽条件",
-    "根据饥饿程度调整份量权重",
-    "建立候选品类与评估维度",
-    "优先检查价格稳定、供应普遍的选项",
-    "将口味偏好转换为检索条件",
-    "检查是否存在彼此冲突的偏好",
-    "准备对候选结果进行交叉核验"
+    "我先把你选的口味、预算和当前状态放在一起看。",
+    "先区分必须满足的条件，以及可以稍微放宽的偏好。",
+    "饥饿程度会影响份量和饱腹感的优先级，我会把它单独算进去。",
+    "我会先列出几类可选方向，再用同一组标准逐一比较。",
+    "先从价格相对稳定、通常容易买到的选项开始。",
+    "我先把口味偏好拆成几个更容易检索的关键词。",
+    "有些偏好可能互相拉扯，我先确认哪一项更值得优先满足。",
+    "候选出来后，我会再用不同类型的资料交叉核对。"
   ];
 
   const evaluationPool = [
-    "对比主食饱腹度、价格区间与选择成本",
-    "降低信息不完整候选项的置信权重",
-    "将菜单丰富度纳入稳妥性评分",
-    "核对候选项是否覆盖当前口味偏好",
-    "估算下单便利度对最终选择的影响",
-    "重新平衡价格、饱腹感与稳定性",
-    "检查结论是否过度依赖单一来源",
-    "对排名靠前的候选项进行二次评分",
-    "移除综合得分波动较大的选项",
-    "比较保守选择与探索性选择的预期满意度",
-    "根据当前状态提高低决策成本选项的权重",
-    "汇总各来源中一致出现的菜单特征"
+    "先看最基本的三件事：吃不吃得饱、价格是否合适、下单是否省心。",
+    "这项资料还不够完整，我会降低它在结论里的权重。",
+    "菜单选择更丰富的选项通常更稳妥，我把这一点也加进比较。",
+    "我再确认一次：这些候选是真的贴合口味，还是只是品牌看起来熟悉。",
+    "下单便利度也会影响体验，我把它作为一个单独维度补进去。",
+    "现在把预算、饱腹感和稳妥程度放回同一组标准里比较。",
+    "我需要避免让某一个来源单独左右结论。",
+    "前几名差距不大，我再比较一次它们差异最明显的地方。",
+    "有些选项的判断波动比较大，先暂时放到次选。",
+    "最后在“稳妥”和“想试点新的”之间留一点弹性。",
+    "如果今天不想费脑子，选择成本低的方案会更占优势。",
+    "几个来源反复提到了相似的菜单特征，我把这部分单独记下来。"
   ];
 
   const sourcePool = [
@@ -928,8 +929,21 @@
     domain.title = source.url;
     const logo = document.createElement('img');
     logo.className = 'source-logo';
-    logo.src = logoByHost[url.hostname] || 'assets/logos/site-generic.svg';
-    logo.alt = `${source.title} logo`;
+    const logoSources = logoByHost[url.hostname] || ['assets/logos/site-generic.svg'];
+    let logoSourceIndex = 0;
+    logo.referrerPolicy = 'no-referrer';
+    const tryNextLogo = () => {
+      logoSourceIndex += 1;
+      if (logoSourceIndex < logoSources.length) {
+        logo.src = logoSources[logoSourceIndex];
+      } else {
+        logo.removeEventListener('error', tryNextLogo);
+        logo.src = 'assets/logos/site-generic.svg';
+      }
+    };
+    logo.addEventListener('error', tryNextLogo);
+    logo.src = logoSources[logoSourceIndex];
+    logo.alt = `${familyNames[familyOf(source)] || source.title} Logo`;
     logo.loading = 'lazy';
     const status = document.createElement('span');
     status.className = 'source-status';
@@ -955,30 +969,75 @@
     'www.sialchina.cn': 'noodles', 'luobawang.jd.com': 'noodles',
     'zh.wikipedia.org': 'noodles', 'themeatandwineco.com': 'steak'
   };
+  // Prefer authentic vector or high-resolution marks from each brand's official
+  // site/visual-identity page. Local genuine marks remain as offline fallbacks.
   const logoByHost = {
-    'www.mcdonalds.com.cn': 'assets/logos/mcdonalds.svg',
-    'mcd.cn': 'assets/logos/mcd-cn.ico',
-    'www.kfc.com.cn': 'assets/logos/kfc.svg',
-    'order.kfc.com.cn': 'assets/logos/kfc.svg',
-    'www.subway.com.cn': 'assets/logos/subway-wordmark.svg',
-    'www.pizzahut.com.cn': 'assets/logos/site-generic.svg',
-    'm.pizzahut.com.cn': 'assets/logos/site-generic.svg',
-    'www.starbucks.com.cn': 'assets/logos/starbucks.svg',
-    'www.luckincoffee.com': 'assets/logos/luckincoffee-com.ico',
-    'www.haidilao.com': 'assets/logos/haidilao-com.ico',
-    'www.chabaidao.com': 'assets/logos/chabaidao-wordmark.svg',
-    'www.naixue.com': 'assets/logos/naixue-wordmark.svg',
-    'www.mxbc.com': 'assets/logos/site-generic.svg',
-    'www.lxjchina.com.cn': 'assets/logos/laoxiangji-wordmark.svg',
-    'www.tasiting.com': 'assets/logos/site-generic.svg',
-    'chagee.com.hk': 'assets/logos/chagee-com-hk.png',
-    'houqin.sjtu.edu.cn': 'assets/logos/site-generic.svg',
-    'ourhome.sjtu.edu.cn': 'assets/logos/site-generic.svg',
-    'www.sialchina.cn': 'assets/logos/sialchina-cn.png',
-    'luobawang.jd.com': 'assets/logos/jd-wordmark.svg',
-    'zh.wikipedia.org': 'assets/logos/wikipedia.svg',
-    'themeatandwineco.com': 'assets/logos/site-generic.svg',
-    'europepmc.org': 'assets/logos/europepmc-org.ico'
+    'www.mcdonalds.com.cn': ['assets/logos/mcdonalds.svg'],
+    'mcd.cn': ['assets/logos/mcdonalds.svg', 'assets/logos/mcd-cn.ico'],
+    'www.kfc.com.cn': ['assets/logos/kfc.svg'],
+    'order.kfc.com.cn': ['assets/logos/kfc.svg'],
+    'www.subway.com.cn': [
+      'https://www.svgrepo.com/show/352532/subway.svg'
+    ],
+    'www.pizzahut.com.cn': [
+      'https://static.pizzahut.com.cn/PC/Content/images/logo.png'
+    ],
+    'm.pizzahut.com.cn': [
+      'https://static.pizzahut.com.cn/PC/Content/images/logo.png'
+    ],
+    'www.starbucks.com.cn': ['assets/logos/starbucks.svg'],
+    'www.luckincoffee.com': [
+      'https://companieslogo.com/img/orig/LKNCY-e74347b5.svg',
+      'assets/logos/luckincoffee-com.ico'
+    ],
+    'www.haidilao.com': [
+      'https://img.logodad.com/upload/dfd/haidilao.svg',
+      'assets/logos/haidilao-com.ico'
+    ],
+    'www.chabaidao.com': [
+      'https://img.logodad.com/upload/C/odH/chabaidao.svg',
+      'https://www.chabaidao.com/public/m/img/cha.png'
+    ],
+    'www.naixue.com': [
+      'https://www.naixue.com/ic_logo.png',
+      'https://img.logodad.com/upload/5/4K0/nayuki_new_logo.svg'
+    ],
+    'www.mxbc.com': [
+      'https://oss.mxbc.com/uploads/images/202508/d0f3ec7b09cef7a19808b3d6972bdbc7.svg',
+      'https://www.mxbc.com/static/img/favicon.ico'
+    ],
+    'www.lxjchina.com.cn': [
+      'https://www.lxjchina.com.cn/upload/2026-01/176818889304861100.png'
+    ],
+    'www.tasiting.com': [
+      'https://www.tasiting.com/templates/tastien/image/wangyexiaotu-26.4.21.png',
+      'https://www.tasiting.com/templates/tastien/image/yeqian-26.4.15.ico'
+    ],
+    'chagee.com.hk': [
+      'https://chagee.com.hk/favicon.ico',
+      'assets/logos/chagee-com-hk.png'
+    ],
+    'houqin.sjtu.edu.cn': [
+      'https://vi.sjtu.edu.cn/index.php/downloads/attachments/133'
+    ],
+    'ourhome.sjtu.edu.cn': [
+      'https://vi.sjtu.edu.cn/index.php/downloads/attachments/133'
+    ],
+    'www.sialchina.cn': [
+      'https://www.sialchina.cn/_nuxt/logo.9O3TkDU6.svg',
+      'assets/logos/sialchina-cn.png'
+    ],
+    'luobawang.jd.com': [
+      'https://www.jd.com/favicon.ico'
+    ],
+    'zh.wikipedia.org': ['assets/logos/wikipedia.svg'],
+    'themeatandwineco.com': [
+      'https://themeatandwineco.com/wp-content/uploads/2020/01/cropped-mwco-logo-icon.png'
+    ],
+    'europepmc.org': [
+      'https://europepmc.org/img/Europe%20PMC%20Basic%20Logo%20RGB.71c1dbf7.png?t=1',
+      'assets/logos/europepmc-org.ico'
+    ]
   };
 
   const familyNames = {
@@ -1027,23 +1086,23 @@
     const discoveries = {
       noodles: {
         query: sample(['螺蛳粉 酸辣口味 配料 产品介绍', '螺霸王 螺蛳粉 菜单 产品']),
-        reason: '这一轮补充地方风味主食，重点查看螺蛳粉的口味、配料和可选产品。'
+        reason: '为了不让候选都挤在连锁快餐里，我再看看地方风味主食，重点了解螺蛳粉的口味、配料和可选产品。'
       },
       steak: {
         query: sample(['牛排 餐厅 中文菜单', '牛排 餐厅 午餐套餐 菜单']),
-        reason: '这一轮补充正餐选项，重点查看牛排餐厅的菜单与套餐，扩大主食选择范围。'
+        reason: '前面的候选偏日常，我再补一个更完整的正餐方向，看看牛排菜单和套餐是否合适。'
       },
       campus: {
         query: '上海交通大学 后勤 餐饮 食堂',
-        reason: '这一轮补充校园餐饮参考，重点查看食堂和周边餐饮信息，增加日常就餐选项。'
+        reason: '再补一个离日常更近的选择：看看校园食堂和周边餐饮，避免候选只剩连锁品牌。'
       }
     };
     return {
       budget,
       paperFocus: choosePaperFocus(taste, Number(hunger.value)),
       jobs: [
-        { query: `${taste} 热门餐饮 官方菜单`, reason: `你选择了「${taste}」口味，因此先从热门餐饮品牌菜单中查找候选项`, sources: choosePages(sourcePool.filter(s => isFastFood(s) && s.group === 'menu'), 2) },
-        { query: '麦当劳 营养计算器 餐品信息', reason: '菜单名称不足以比较份量与营养，因此补充查询餐品营养资料', sources: choosePages(sourcePool.filter(s => s.group === 'nutrition'), 1) },
+        { query: `${taste} 热门餐饮 官方菜单`, reason: `先从常见品牌菜单铺开一轮，看看哪些品类可能覆盖你选的「${taste}」口味。`, sources: choosePages(sourcePool.filter(s => isFastFood(s) && s.group === 'menu'), 2) },
+        { query: '麦当劳 营养计算器 餐品信息', reason: '菜单名称只能告诉我“有什么”，还不足以判断份量和饱腹感；我再补看一组餐品营养资料。', sources: choosePages(sourcePool.filter(s => s.group === 'nutrition'), 1) },
         { ...discoveries[discovery], sources: choosePages(sourcePool.filter(s => familyOf(s) === discovery && !s.url.includes('jd.com')), 2) }
       ]
     };
@@ -1106,14 +1165,14 @@
   function paperTransition(focus, sources) {
     const examples = [...new Set(sources.map(source => source.title))].slice(-2);
     const context = examples.length
-      ? `刚才整理了「${examples.join('」「')}」等餐饮资料，接下来补充一个比较维度。`
-      : '本轮餐饮资料不完整，接下来补充与饮食选择有关的一般研究。';
+      ? `前面主要解决了“有什么可吃”，目前已经整理到「${examples.join('」「')}」等资料。接下来再补一个更通用的比较依据。`
+      : '这一轮能用的餐饮资料不多，我换个角度，补充一些与饮食选择有关的一般研究。';
     const questions = {
-      satiety: '菜单和餐品介绍不能直接说明食物质地与饱腹感的关系',
-      taste: '餐品口味介绍不能直接说明味觉如何影响食物偏好',
-      choice: '订餐与菜单页面不能直接解释价格、便利性如何影响选择'
+      satiety: '菜单能列出餐品，却不能直接回答什么样的食物更有饱腹感',
+      taste: '口味描述能帮助筛选，却不能直接解释味觉如何影响偏好',
+      choice: '订餐页面能提供选项，却不能直接说明价格和便利性怎样影响选择'
     };
-    return `${context}${questions[focus.id]}，因此转向「${focus.label}」文献，查看相关研究背景。`;
+    return `${context}${questions[focus.id]}。我会查一下「${focus.label}」相关文献，只把它作为背景参考。`;
   }
 
   async function researchPapers(focus, sources = []) {
@@ -1125,10 +1184,10 @@
       `TITLE_ABS:${focus.terms} AND PUB_TYPE:review${base}`,
       `TITLE_ABS:${focus.broad}${base}`
     ];
-    thinkingTitle.textContent = '餐饮资料已整理，准备补充研究依据…';
+    thinkingTitle.textContent = '候选已经有了，再补一个比较维度…';
     appendLog('PLAN', paperTransition(focus, sources)).classList.add('decision-note');
     await pause(2200, 2800, true);
-    appendLog('PLAN', `接下来实时查询 Europe PMC，初筛 ${target} 篇有摘要的文献；只补充研究背景，不据此判定品牌优劣。`);
+    appendLog('PLAN', `我会在 Europe PMC 中找 ${target} 篇有摘要的相关文献。它们只用于补充背景，不会直接替某个品牌背书。`);
     await pause(1000, 1600, true);
     thinkingTitle.textContent = '正在实时检索食品文献…';
     let unavailable = false;
@@ -1136,8 +1195,8 @@
       if (collected.length >= target) break;
       if (attempt) {
         appendLog('PLAN', unavailable
-          ? '上一条文献请求失败，因此更换为简化检索词再尝试一次'
-          : `当前只保留 ${collected.length} 篇相关文献，因此放宽检索条件补充查找；已获取文献不重复读取`).classList.add('decision-note');
+          ? '刚才的文献请求没有成功，我把检索词简化后再试一次。'
+          : `目前只找到 ${collected.length} 篇合适的文献，我稍微放宽检索条件继续找；已经看过的不会重复。`).classList.add('decision-note');
         await pause(1000, 1700, true);
       }
       const status = appendLog('SEARCH', `实时检索 Europe PMC：「${query}」`);
@@ -1168,11 +1227,11 @@
           const sentence = sentences.find(text => focus.keywords.some(word => text.toLowerCase().includes(word))) || sentences[0];
           const words = sentence.trim().split(/\s+/);
           const excerpt = words.slice(0, 22).join(' ') + (words.length > 22 ? '…' : '');
-          appendLog('ANALYZE', `「${paper.title}」摘要摘录（原文）：${excerpt}`);
+          appendLog('ANALYZE', `这篇摘要里与当前问题最接近的一句是：“${excerpt}”`);
           await pause(1600, 2400, true);
           const design = paper.types.find(type => /meta-analysis|systematic review|randomized controlled trial/i.test(type)) ||
             paper.types.find(type => /review/i.test(type)) || '题录未明确研究设计';
-          appendLog('ANALYZE', `规则初筛：摘要与标题命中 ${paper.matches.join(' / ')}；研究类型：${design}。这些词说明主题相关，不能据此判断影响方向或因果关系。`);
+          appendLog('ANALYZE', `它的标题和摘要命中了 ${paper.matches.join(' / ')}，研究类型为 ${design}。相关性够用，但仅凭这些信息还不能判断影响方向或因果关系。`);
           await pause(1300, 2100, true);
         }
       } catch (error) {
@@ -1184,8 +1243,8 @@
     }
     lastPaperIds = collected.map(paper => paper.key);
     const summary = collected.length
-      ? `本轮实时获取并初筛 ${collected.length} 篇「${focus.label}」文献；文献不用于证明具体品牌更适合你。`
-      : '本轮未获取到可用论文，文献分析已跳过。';
+      ? `我找到了 ${collected.length} 篇与「${focus.label}」有关的文献，只把它们作为一般背景，不据此判断哪个品牌更适合你。`
+      : '这一轮没有找到足够合适的论文，我先跳过文献部分，不让弱相关信息干扰结论。';
     appendLog('VERIFY', summary);
     document.getElementById('paperSummary').textContent = summary;
     await pause(1200, 1800, true);
@@ -1273,7 +1332,7 @@
       ];
       async function search(query, pages, reason) {
         thinkingTitle.textContent = '正在搜索参考资料…';
-        const explanation = appendLog('PLAN', `下一步依据：${reason}`);
+        const explanation = appendLog('PLAN', reason);
         explanation.classList.add('decision-note');
         await pause(700, 1200, true);
         const status = appendLog('SEARCH', `正在搜索「${query}」`);
@@ -1301,10 +1360,10 @@
             reserved.add(alternatives[0].url);
             const retryQuery = `${familyNames[family]} ${alternatives[0].group === 'order' ? '订餐 门店查询' : '相关资料 菜单 产品介绍'}`;
             await search(retryQuery, alternatives,
-              `「${source.title}」访问失败，无法提供参考，因此改查「${alternatives[0].title}」`);
+              `「${source.title}」没有成功打开，我先不在这里卡住，改看同一类别的「${alternatives[0].title}」。`);
             await readSource(alternatives[0], retryQuery, allowFollowUp);
           } else {
-            const explanation = appendLog('ANALYZE', `「${source.title}」访问失败，且暂无未访问的同类替代页，因此保留信息缺口，继续其他检索`);
+            const explanation = appendLog('ANALYZE', `「${source.title}」没有成功打开，也暂时没有新的同类来源可替代。我会保留这个信息缺口，继续比较其他候选。`);
             explanation.classList.add('decision-note');
             await pause(900, 1500, true);
           }
@@ -1331,9 +1390,9 @@
             reserved.add(extra[0].url);
             const priceQuery = `${familyNames[family]} ${plan.budget === '不看价格' ? '单人餐' : plan.budget} ${family === 'noodles' ? '商品 价格' : '订餐 门店 价格'}`;
             await search(priceQuery, extra,
-              `「${source.title}」不足以确认当前售价，因此补查「${extra[0].title}」，寻找${family === 'noodles' ? '商品价格' : '订餐或门店信息'}`);
+              `「${source.title}」能说明有哪些选择，但还看不出当前售价。我再查「${extra[0].title}」，补充${family === 'noodles' ? '商品价格' : '订餐或门店信息'}。`);
             await readSource(extra[0], priceQuery, false);
-            appendLog('ANALYZE', '已补充查询入口；实际价格、供应范围仍需在对应页面确认');
+            appendLog('ANALYZE', '价格查询入口已经补上；具体售价和供应范围仍要以你所在地区的页面为准。');
             await pause(700, 1100);
           }
         }
@@ -1349,7 +1408,7 @@
 
       thinkingTitle.textContent = '正在分析与比较…';
       if (failedSources.size) {
-        appendLog('ANALYZE', `已跳过 ${failedSources.size} 个访问失败的页面，整理 ${completed.length} 个已完成来源（含补搜）`);
+        appendLog('ANALYZE', `${failedSources.size} 个页面没有成功打开；目前还有 ${completed.length} 个可用来源，信息量足够继续比较。`);
         await pause(1000, 1600);
       }
       for (const thought of pickMany(evaluationPool, 3, 4)) {
@@ -1359,12 +1418,12 @@
 
       thinkingTitle.textContent = '正在核对结果…';
       appendLog('VERIFY', sample([
-        '区分历史介绍与当前订餐入口，价格与库存需以门店为准',
-        '检查来源适用范围，不将品牌介绍作为实时门店信息',
-        '核对信息时效，不将历史活动价格用于当前比较'
+        '最后再核对一次：历史介绍和当前订餐信息不能混在一起，价格与库存仍以具体门店为准。',
+        '我正在检查每条资料的适用范围，不会把品牌介绍当成实时门店信息。',
+        '我会把历史活动价排除在当前比较之外，避免过期信息影响结果。'
       ]));
       await pause(1700, 2600, true);
-      appendLog('VERIFY', '检查完成，正在整理推荐结果');
+      appendLog('VERIFY', '核对完成。我把前面的取舍压缩成一个明确答案。');
       await pause(1200, 1900, true);
 
       thinkingTitle.textContent = '检索完成';
