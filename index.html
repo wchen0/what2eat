@@ -309,13 +309,14 @@
     color:#886719;
   }
   .log li[data-kind="VERIFY"] .log-kind{background:#e8f2e9;color:#397346}
-  .source-card{display:block;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff;font-family:inherit}
+  .source-card{position:relative;display:block;min-height:68px;padding:12px 86px 12px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;font-family:inherit}
   .source-card a{display:block;color:#315d87;font-weight:700;text-decoration:none;line-height:1.6}
   .source-card a:hover{text-decoration:underline}
   .source-card a:focus-visible{outline:2px solid #315d87;outline-offset:3px}
   .source-domain,.source-status{display:block;font-size:11px;color:#817970;margin-top:5px}
   .source-status{color:#66605a}
   .source-status[data-state="failed"]{color:#a34b3c}
+  .source-logo{position:absolute;top:50%;right:14px;width:58px;height:58px;padding:5px;transform:translateY(-50%);border:1px solid var(--line);border-radius:12px;background:#fff;object-fit:contain}
   .decision-note{
     display:block;
     padding:9px 11px;
@@ -584,7 +585,8 @@
     .log{max-height:52vh;font-size:12px}
     .log li{grid-template-columns:68px minmax(0, 1fr);gap:7px}
     .log-kind{padding:3px 4px;font-size:9px}
-    .source-card{padding:9px}
+    .source-card{min-height:62px;padding:9px 76px 9px 9px}
+    .source-logo{right:10px;width:52px;height:52px}
     .logo-wrap{
       width:100%;
       max-width:320px;
@@ -660,7 +662,7 @@
         </div>
 
         <div class="actions">
-          <button class="primary" id="decideBtn" type="button">开始分析</button>
+      <button class="primary" id="decideBtn" type="button">开始分析 · GPT-6</button>
         </div>
       </div>
 
@@ -668,7 +670,7 @@
         <div class="thinking-title">
           <span class="loader"></span>
           <span id="thinkingTitle">正在分析你的饮食偏好……</span>
-          <span class="simulation-badge">Deep Research Agent</span>
+          <span class="simulation-badge">GPT-6 · Deep Research Agent</span>
         </div>
         <p class="thinking-note">实时检索网页中……</p>
         <ul class="log" id="log" aria-live="polite"></ul>
@@ -854,12 +856,24 @@
   }
 
   // Routine transitions move faster; important explanations retain reading time.
-  const playbackTiming = { multiplier: .72, minimumPause: 720, readingMultiplier: .96, readingMinimum: 1440 };
+  const playbackTiming = {
+    multiplier: .72,
+    planMultiplier: .50,
+    minimumPause: 720,
+    readingMultiplier: .96,
+    readingMinimum: 1440
+  };
 
-  function pause(min = 1250, max = 2450, reading = false) {
+  function pause(min = 1250, max = 2450, reading = false, mode = 'routine') {
+    const multiplier = mode === 'plan' ? playbackTiming.planMultiplier :
+      (reading ? playbackTiming.readingMultiplier : playbackTiming.multiplier);
     const duration = Math.max(reading ? playbackTiming.readingMinimum : playbackTiming.minimumPause,
-      Math.round(randomInt(min, max) * (reading ? playbackTiming.readingMultiplier : playbackTiming.multiplier)));
+      Math.round(randomInt(min, max) * multiplier));
     return new Promise(resolve => setTimeout(resolve, duration));
+  }
+
+  function planPause(min = 1250, max = 2450) {
+    return pause(min, max, false, 'plan');
   }
 
   function appendLog(kind, message) {
@@ -912,13 +926,18 @@
     const url = new URL(source.url);
     domain.textContent = `${url.hostname}${decodeURIComponent(url.pathname)}${decodeURIComponent(url.search)}`;
     domain.title = source.url;
+    const logo = document.createElement('img');
+    logo.className = 'source-logo';
+    logo.src = logoByHost[url.hostname] || 'assets/logos/site-generic.svg';
+    logo.alt = `${source.title} logo`;
+    logo.loading = 'lazy';
     const status = document.createElement('span');
     status.className = 'source-status';
     status.textContent = '正在打开页面…';
     const origin = document.createElement('span');
     origin.className = 'source-domain';
     origin.textContent = `检索：${query}`;
-    body.append(link, domain, status, origin);
+    body.append(link, domain, status, origin, logo);
     return status;
   }
 
@@ -936,6 +955,32 @@
     'www.sialchina.cn': 'noodles', 'luobawang.jd.com': 'noodles',
     'zh.wikipedia.org': 'noodles', 'themeatandwineco.com': 'steak'
   };
+  const logoByHost = {
+    'www.mcdonalds.com.cn': 'assets/logos/mcdonalds.svg',
+    'mcd.cn': 'assets/logos/mcd-cn.ico',
+    'www.kfc.com.cn': 'assets/logos/kfc.svg',
+    'order.kfc.com.cn': 'assets/logos/kfc.svg',
+    'www.subway.com.cn': 'assets/logos/subway-wordmark.svg',
+    'www.pizzahut.com.cn': 'assets/logos/site-generic.svg',
+    'm.pizzahut.com.cn': 'assets/logos/site-generic.svg',
+    'www.starbucks.com.cn': 'assets/logos/starbucks.svg',
+    'www.luckincoffee.com': 'assets/logos/luckincoffee-com.ico',
+    'www.haidilao.com': 'assets/logos/haidilao-com.ico',
+    'www.chabaidao.com': 'assets/logos/chabaidao-wordmark.svg',
+    'www.naixue.com': 'assets/logos/naixue-wordmark.svg',
+    'www.mxbc.com': 'assets/logos/site-generic.svg',
+    'www.lxjchina.com.cn': 'assets/logos/laoxiangji-wordmark.svg',
+    'www.tasiting.com': 'assets/logos/site-generic.svg',
+    'chagee.com.hk': 'assets/logos/chagee-com-hk.png',
+    'houqin.sjtu.edu.cn': 'assets/logos/site-generic.svg',
+    'ourhome.sjtu.edu.cn': 'assets/logos/site-generic.svg',
+    'www.sialchina.cn': 'assets/logos/sialchina-cn.png',
+    'luobawang.jd.com': 'assets/logos/jd-wordmark.svg',
+    'zh.wikipedia.org': 'assets/logos/wikipedia.svg',
+    'themeatandwineco.com': 'assets/logos/site-generic.svg',
+    'europepmc.org': 'assets/logos/europepmc-org.ico'
+  };
+
   const familyNames = {
     starbucks: '星巴克', luckin: '瑞幸咖啡', haidilao: '海底捞', chabaidao: '茶百道',
     naixue: '奈雪的茶', mixue: '蜜雪冰城', laoxiangji: '老乡鸡', tastien: '塔斯汀', chagee: '霸王茶姬',
@@ -1205,7 +1250,7 @@
     document.getElementById('paperSummary').textContent = '';
     decideBtn.disabled = true;
     againBtn.disabled = true;
-    decideBtn.textContent = '分析中……';
+    decideBtn.textContent = 'GPT-6 分析中……';
     try {
       // Snapshot preferences before waiting so a run uses one consistent set of inputs.
       const plan = buildSearchPlan();
@@ -1217,7 +1262,7 @@
       let priceSearches = 0;
       for (const thought of pickMany(planningPool, 2, 3)) {
         appendLog('PLAN', thought);
-        await pause(1400, 2300);
+        await planPause(1400, 2300);
       }
 
       const failedSources = new Set(pickMany(sources, 0, 2));
@@ -1309,7 +1354,7 @@
       }
       for (const thought of pickMany(evaluationPool, 3, 4)) {
         appendLog('ANALYZE', thought);
-        await pause(1700, 2800);
+        await planPause(1700, 2800);
       }
 
       thinkingTitle.textContent = '正在核对结果…';
@@ -1337,7 +1382,7 @@
       running = false;
       decideBtn.disabled = false;
       againBtn.disabled = false;
-      decideBtn.textContent = '开始分析';
+      decideBtn.textContent = '开始分析 · GPT-6';
     }
   }
 
