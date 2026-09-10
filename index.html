@@ -260,6 +260,18 @@
     letter-spacing:.04em;
   }
 
+  .eta{
+    padding:5px 9px;
+    border:1px solid rgba(239,43,45,.18);
+    border-radius:999px;
+    color:#a83b31;
+    background:#fff3ef;
+    font-size:11px;
+    font-weight:800;
+    font-variant-numeric:tabular-nums;
+    white-space:nowrap;
+  }
+
   .loader{
     width:16px;height:16px;border-radius:50%;
     border:2px solid #ddd2c8;
@@ -589,6 +601,7 @@
     .thinking{background:#1d1b18}
     .thinking-note,.source-domain,.simulation-badge{color:#c5bcae}
     .simulation-badge,.source-card{background:#292621;border-color:var(--line)}
+    .eta{background:#3a2824;border-color:#704039;color:#ffb5aa}
     .log,.source-status{color:#d4cbbf}
     .source-card a{color:#a9d0ff}
     .source-status[data-state="failed"]{color:#ffab98}
@@ -690,6 +703,7 @@
         <div class="thinking-title">
           <span class="loader"></span>
           <span id="thinkingTitle">正在分析你的饮食偏好……</span>
+          <span class="eta" id="eta" hidden>预计剩余 1 分钟</span>
           <span class="simulation-badge">GPT-6 · Deep Research Agent</span>
         </div>
         <p class="thinking-note">实时检索网页中……</p>
@@ -752,9 +766,12 @@
   const reviewModal = document.getElementById('reviewModal');
   const reviewModalClose = document.getElementById('reviewModalClose');
   const thinkingTitle = document.getElementById('thinkingTitle');
+  const eta = document.getElementById('eta');
   let running = false;
   let lastSourceUrls = [];
   let lastPaperIds = [];
+  let etaTimer = null;
+  let etaSeconds = 0;
 
   hunger.addEventListener('input', () => {
     hungerValue.textContent = hunger.value + ' / 10';
@@ -1316,6 +1333,48 @@
     if (document.hidden) stopFireworks();
   });
 
+  function formatEta(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const remainder = seconds % 60;
+    return minutes > 0
+      ? `${minutes} 分 ${String(remainder).padStart(2, '0')} 秒`
+      : `${remainder} 秒`;
+  }
+
+  function renderEta() {
+    eta.textContent = `预计剩余 ${formatEta(etaSeconds)}`;
+  }
+
+  function stopEta(message = '预计剩余 0 秒') {
+    clearInterval(etaTimer);
+    etaTimer = null;
+    eta.textContent = message;
+  }
+
+  function startEta() {
+    clearInterval(etaTimer);
+    etaSeconds = randomInt(80, 105);
+    eta.hidden = false;
+    renderEta();
+
+    etaTimer = setInterval(() => {
+      const roll = Math.random();
+      if (roll < .08) {
+        etaSeconds += randomInt(2, 4);
+      } else if (roll < .18) {
+        // Briefly hold the estimate while the current step is reassessed.
+      } else if (roll < .43) {
+        etaSeconds -= 2;
+      } else {
+        etaSeconds -= 1;
+      }
+
+      // Never reach zero before the actual analysis has finished.
+      if (etaSeconds <= 5) etaSeconds = randomInt(7, 12);
+      renderEta();
+    }, 1000);
+  }
+
   async function waitForAnalysisQueue() {
     let peopleAhead = randomInt(3, 4);
     thinkingTitle.textContent = '正在等待分析槽位…';
@@ -1343,6 +1402,7 @@
     decideBtn.disabled = true;
     againBtn.disabled = true;
     decideBtn.textContent = 'GPT-6 分析中……';
+    startEta();
     try {
       // Snapshot preferences before waiting so a run uses one consistent set of inputs.
       const plan = buildSearchPlan();
@@ -1461,6 +1521,7 @@
       await pause(1200, 1900, true);
 
       thinkingTitle.textContent = '检索完成';
+      stopEta();
       thinking.classList.add('done');
       resultReason.textContent = sample(resultReasons);
       resultConfidence.textContent = `置信度: ${(randomInt(8000, 9800) / 100).toFixed(2)}%`;
@@ -1469,9 +1530,12 @@
       launchFireworks();
     } catch (error) {
       thinkingTitle.textContent = '检索未完成，请重新分析';
+      stopEta('时间估算已停止');
       thinking.classList.add('done');
       console.error('Decision demo failed:', error);
     } finally {
+      clearInterval(etaTimer);
+      etaTimer = null;
       running = false;
       decideBtn.disabled = false;
       againBtn.disabled = false;
