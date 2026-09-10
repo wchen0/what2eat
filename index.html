@@ -5,6 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>今天吃什么？</title>
 <meta name="description" content="一个非常认真地帮你决定今天吃什么的网站。" />
+<!-- 分享预览：部署后请将 og:image 和 twitter:image 替换为实际域名的完整地址。 -->
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://wchen0.github.io/what2eat/" />
+<meta property="og:title" content="今天吃什么？" />
+<meta property="og:description" content="帮你决定今天吃什么的智能推荐工具。" />
+<meta property="og:image" content="https://wchen0.github.io/what2eat/assets/share-card.jpg" />
+<meta property="og:image:type" content="image/jpeg" />
+<meta property="og:image:width" content="392" />
+<meta property="og:image:height" content="392" />
+<meta property="og:image:alt" content="今天吃什么分享封面" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="今天吃什么？" />
+<meta name="twitter:description" content="帮你决定今天吃什么。" />
+<meta name="twitter:image" content="https://wchen0.github.io/what2eat/assets/share-card.jpg" />
 <link rel="icon" href="favicon.ico" sizes="any" />
 <style>
   :root{
@@ -309,6 +323,7 @@
     background:#fff0cf;
     color:#886719;
   }
+  .log li[data-kind="QUEUE"] .log-kind{background:#f5ead2;color:#8a6522}
   .log li[data-kind="VERIFY"] .log-kind{background:#e8f2e9;color:#397346}
   .source-card{position:relative;display:block;min-height:68px;padding:12px 86px 12px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;font-family:inherit}
   .source-card a{display:block;color:#315d87;font-weight:700;text-decoration:none;line-height:1.6}
@@ -977,7 +992,7 @@
     'www.kfc.com.cn': ['assets/logos/kfc.svg'],
     'order.kfc.com.cn': ['assets/logos/kfc.svg'],
     'www.subway.com.cn': [
-      'https://www.svgrepo.com/show/352532/subway.svg'
+      'https://www.subway.com.cn/img/logo.png?1784596697'
     ],
     'www.pizzahut.com.cn': [
       'https://static.pizzahut.com.cn/PC/Content/images/logo.png'
@@ -1297,6 +1312,20 @@
     if (document.hidden) stopFireworks();
   });
 
+  async function waitForAnalysisQueue() {
+    let peopleAhead = randomInt(3, 4);
+    thinkingTitle.textContent = '正在等待分析槽位…';
+    const queueStatus = appendLog('QUEUE', `当前需要排队，前面还有 ${peopleAhead} 条请求。`);
+
+    while (peopleAhead > 0) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      peopleAhead -= 1;
+      queueStatus.textContent = peopleAhead > 0
+        ? `当前需要排队，前面还有 ${peopleAhead} 条请求。`
+        : '排队完成，开始分析你的饮食偏好。';
+    }
+  }
+
   async function runDecision() {
     if (running) return;
     running = true;
@@ -1319,6 +1348,7 @@
       const completed = [];
       const priceChecked = new Set();
       let priceSearches = 0;
+      await waitForAnalysisQueue();
       for (const thought of pickMany(planningPool, 2, 3)) {
         appendLog('PLAN', thought);
         await planPause(1400, 2300);
